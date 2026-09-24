@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from rich.console import Console
 
@@ -19,8 +20,10 @@ from talos_agent.config import resolve_setting_secret
 
 if TYPE_CHECKING:
     from talos_agent.config import Settings
+    from opentelemetry.trace import Span
 
 console = Console()
+logger = logging.getLogger(__name__)
 
 _DISCORD_API = "https://discord.com/api/v10"
 _CHAR_LIMIT = 2000
@@ -162,7 +165,7 @@ class DiscordAdapter(BaseSocialAdapter):
 
     # ── Publishing ───────────────────────────────────────────
 
-    async def post(self, content: str, **kwargs) -> PublishResult:
+    async def post(self, content: str, **kwargs: Any) -> PublishResult:
         valid, error = self.validate_content(content)
         if not valid:
             return PublishResult(status="failed", channel=self.channel_name, content=content, error=error)
@@ -193,7 +196,17 @@ class DiscordAdapter(BaseSocialAdapter):
         )
 
     async def _webhook_post(self, payload: dict, content: str) -> PublishResult:
-        resp = await self._http.post(f"{self._webhook_url}?wait=true", json=payload)
+        try:
+            resp = await self._http.post(f"{self._webhook_url}?wait=true", json=payload)
+        except Exception as e:
+            logger.warning("Discord webhook POST failed with exception: %s", str(e))
+            return PublishResult(
+                status="failed",
+                channel=self.channel_name,
+                content=content,
+                error=f"Webhook POST failed: Network error — {type(e).__name__}",
+            )
+
         if resp.status_code in (200, 204):
             data: dict = resp.json() if resp.content else {}
             msg_id = str(data.get("id", ""))
@@ -215,7 +228,17 @@ class DiscordAdapter(BaseSocialAdapter):
         )
 
     async def _api_post(self, url: str, payload: dict, content: str) -> PublishResult:
-        resp = await self._http.post(url, headers=self._auth_headers, json=payload)
+        try:
+            resp = await self._http.post(url, headers=self._auth_headers, json=payload)
+        except Exception as e:
+            logger.warning("Discord API POST failed with exception: %s", str(e))
+            return PublishResult(
+                status="failed",
+                channel=self.channel_name,
+                content=content,
+                error=f"API POST failed: Network error — {type(e).__name__}",
+            )
+
         if resp.status_code == 200:
             data = resp.json()
             msg_id = data.get("id", "")
@@ -235,7 +258,7 @@ class DiscordAdapter(BaseSocialAdapter):
             error=f"API POST failed: HTTP {resp.status_code} — {resp.text[:200]}",
         )
 
-    async def reply(self, target_url: str, content: str, **kwargs) -> PublishResult:
+    async def reply(self, target_url: str, content: str, **kwargs: Any) -> PublishResult:
         """Reply to a Discord message using its discord.com/channels/... URL."""
         if not (self._bot_token and self._channel_id):
             return PublishResult(
@@ -255,7 +278,17 @@ class DiscordAdapter(BaseSocialAdapter):
             payload["message_reference"] = {"message_id": message_id}
 
         url = f"{_DISCORD_API}/channels/{channel_id}/messages"
-        resp = await self._http.post(url, headers=self._auth_headers, json=payload)
+        try:
+            resp = await self._http.post(url, headers=self._auth_headers, json=payload)
+        except Exception as e:
+            logger.warning("Discord reply POST failed with exception: %s", str(e))
+            return PublishResult(
+                status="failed",
+                channel=self.channel_name,
+                content=content,
+                error=f"Reply failed: Network error — {type(e).__name__}",
+            )
+
         if resp.status_code == 200:
             data = resp.json()
             return PublishResult(
@@ -274,17 +307,22 @@ class DiscordAdapter(BaseSocialAdapter):
 
     # ── Discovery ────────────────────────────────────────────
 
-    async def get_mentions(self, **kwargs) -> list[dict]:
+    async def get_mentions(self, **kwargs: Any) -> list[dict]:
         """Fetch recent messages that mention the bot in the configured channel."""
         if not (self._bot_token and self._channel_id):
             console.print("[yellow]Discord get_mentions: requires BOT_TOKEN + CHANNEL_ID.[/yellow]")
             return []
 
-        resp = await self._http.get(
-            f"{_DISCORD_API}/channels/{self._channel_id}/messages",
-            headers=self._auth_headers,
-            params={"limit": 50},
-        )
+        try:
+            resp = await self._http.get(
+                f"{_DISCORD_API}/channels/{self._channel_id}/messages",
+                headers=self._auth_headers,
+                params={"limit": 50},
+            )
+        except Exception as e:
+            logger.warning("Discord get_mentions failed with exception: %s", str(e))
+            return []
+
         if resp.status_code != 200:
             return []
 
@@ -304,16 +342,21 @@ class DiscordAdapter(BaseSocialAdapter):
             if mention_tag and mention_tag in msg.get("content", "")
         ]
 
-    async def search(self, query: str, **kwargs) -> list[dict]:
+    async def search(self, query: str, **kwargs: Any) -> list[dict]:
         """Search recent channel messages for a keyword (client-side filter, last 100 msgs)."""
         if not (self._bot_token and self._channel_id):
             return []
 
-        resp = await self._http.get(
-            f"{_DISCORD_API}/channels/{self._channel_id}/messages",
-            headers=self._auth_headers,
-            params={"limit": 100},
-        )
+        try:
+            resp = await self._http.get(
+                f"{_DISCORD_API}/channels/{self._channel_id}/messages",
+                headers=self._auth_headers,
+                params={"limit": 100},
+            )
+        except Exception as e:
+            logger.warning("Discord search failed with exception: %s", str(e))
+            return []
+
         if resp.status_code != 200:
             return []
 
@@ -329,75 +372,24 @@ class DiscordAdapter(BaseSocialAdapter):
             if q in msg.get("content", "").lower()
         ]
 
-    # ── Analytics ────────────────────────────────────────────
-
-    async def get_post_performance(self, content_snippet: str, **kwargs) -> dict:
-        """Find a message by content snippet and return its reaction counts."""
-        if not (self._bot_token and self._channel_id):
-            return {"error": "Requires DISCORD_BOT_TOKEN + DISCORD_CHANNEL_ID"}
-
-        resp = await self._http.get(
-            f"{_DISCORD_API}/channels/{self._channel_id}/messages",
-            headers=self._auth_headers,
-            params={"limit": 100},
-        )
-        if resp.status_code != 200:
-            return {"found": False, "error": f"HTTP {resp.status_code}"}
-
-        snippet = content_snippet.lower()
-        for msg in resp.json():
-            if snippet in msg.get("content", "").lower():
-                reactions = {
-                    r["emoji"].get("name", "?"): r["count"]
-                    for r in msg.get("reactions", [])
-                }
-                return {
-                    "found": True,
-                    "message_id": msg["id"],
-                    "reactions": reactions,
-                    "total_reactions": sum(reactions.values()),
-                    "timestamp": msg["timestamp"],
-                }
-        return {"found": False}
-
-    async def get_profile_stats(self, **kwargs) -> dict:
-        """Return bot identity and guild member counts."""
-        if not self._bot_token:
-            return {"error": "Requires DISCORD_BOT_TOKEN"}
-
-        bot_resp = await self._http.get(
-            f"{_DISCORD_API}/users/@me", headers=self._auth_headers
-        )
-        if bot_resp.status_code != 200:
-            return {"error": f"HTTP {bot_resp.status_code}"}
-
-        bot = bot_resp.json()
-        stats: dict = {"bot_username": bot.get("username"), "bot_id": bot.get("id")}
-
-        if self._guild_id:
-            guild_resp = await self._http.get(
-                f"{_DISCORD_API}/guilds/{self._guild_id}?with_counts=true",
-                headers=self._auth_headers,
-            )
-            if guild_resp.status_code == 200:
-                guild = guild_resp.json()
-                stats["guild_name"] = guild.get("name")
-                stats["member_count"] = guild.get("approximate_member_count")
-                stats["online_count"] = guild.get("approximate_presence_count")
-
-        return stats
-
-    # ── Internal helpers ──────────────────────────────────────
-
     async def _get_bot_id(self) -> str | None:
+        """Cache and return the bot's user ID."""
         if self._cached_bot_id:
             return self._cached_bot_id
+
         if not self._bot_token:
             return None
-        resp = await self._http.get(
-            f"{_DISCORD_API}/users/@me", headers=self._auth_headers
-        )
-        if resp.status_code == 200:
-            self._cached_bot_id = resp.json()["id"]
-            return self._cached_bot_id
+
+        try:
+            resp = await self._http.get(
+                f"{_DISCORD_API}/users/@me",
+                headers=self._auth_headers,
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                self._cached_bot_id = data.get("id")
+                return self._cached_bot_id
+        except Exception as e:
+            logger.warning("Discord get_bot_id failed with exception: %s", str(e))
+
         return None
