@@ -18,7 +18,7 @@ mod registry_schema_tests;
 extern crate std;
 
 use soroban_sdk::{
-    contract, contractimpl, contracttype, symbol_short, Address, BytesN, Env, String, Symbol, Vec,
+    contract, contracterror, contractimpl, contracttype, panic_with_error, symbol_short, Address, BytesN, Env, String, Symbol, Vec,
 };
 use storage_migration;
 use ttl_manager;
@@ -44,6 +44,12 @@ pub const EVENT_SCHEMA_VERSION: EventSchemaVersion = EventSchemaVersion {
 };
 
 // ── Data Types ──────────────────────────────────────────────────────
+
+#[contracterror]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum ContractError {
+    InvalidPatronShares = 1,
+}
 
 #[contracttype]
 #[derive(Clone)]
@@ -328,10 +334,13 @@ fn emit_talos_resumed(env: &Env, talos_id: u32, controller: Address) {
 
 // ── Helpers ─────────────────────────────────────────────────────────
 
-fn validate_patron_shares(patron: &Patron) {
-    let total = patron.creator_share + patron.investor_share + patron.treasury_share;
-    if total != 100 {
-        panic!("Patron shares must sum to 100");
+fn validate_patron_shares(env: &Env, patron: &Patron) {
+    let sum = patron.creator_share
+        .checked_add(patron.investor_share)
+        .and_then(|s| s.checked_add(patron.treasury_share));
+    match sum {
+        Some(100) => {}
+        _ => panic_with_error!(env, ContractError::InvalidPatronShares),
     }
 }
 
@@ -448,7 +457,7 @@ const MAX_ROLLBACK_DEPTH: u32 = 1;
 /// This constant is embedded in the WASM binary at compile time and is
 /// therefore immutable once deployed; it cannot be altered by any admin
 /// call, storage write, or cross-contract invocation.
-pub const CONTRACT_VERSION: (u32, u32, u32) = (1, 3, 0);
+pub const CONTRACT_VERSION: (u32, u32, u32) = (1, 4, 0);
 
 /// Stable 32-byte interface identifier for TalosRegistry v1.
 ///
@@ -460,7 +469,7 @@ pub const INTERFACE_ID: [u8; 32] = [
     0x54, 0x61, 0x6C, 0x6F, 0x73, 0x52, 0x65, 0x67, // "TalosReg"
     0x69, 0x73, 0x74, 0x72, 0x79, 0x00, 0x00, 0x00, // "istry" + zero pads
     0x00, 0x00, 0x00, 0x01, // major = 1
-    0x00, 0x00, 0x00, 0x03, // minor = 3
+    0x00, 0x00, 0x00, 0x04, // minor = 4
     0x00, 0x00, 0x00, 0x00, // patch = 0
     0x00, 0x00, 0x00, 0x00,
 ];
@@ -551,7 +560,7 @@ impl TalosRegistry {
         // Require creator authorization
         patron.creator_addr.require_auth();
 
-        validate_patron_shares(&patron);
+        validate_patron_shares(&e, &patron);
         validate_talos_metadata(&name, &category, &description, &pulse);
 
         // If the registry has been initialized, ensure callers use the configured
@@ -655,7 +664,7 @@ impl TalosRegistry {
         // Require creator authorization
         talos.creator.require_auth();
 
-        validate_patron_shares(&patron);
+        validate_patron_shares(&e, &patron);
 
         talos.patron = patron.clone();
 
@@ -1472,6 +1481,31 @@ impl TalosRegistry {
         BytesN::from_array(&e, &INTERFACE_ID)
     }
 
+    /// Return the canonical deployment-manifest digest for this contract.
+    ///
+    /// This additive read-only query re-derives a stable digest from the
+    /// interface ID, semver, capability list, and event schema version. It
+    /// never stores any data in state and therefore remains safe for repeated
+    /// operator verification and compatibility checks.
+    pub fn deployment_manifest_digest(e: Env) -> BytesN<32> {
+        let mut payload = soroban_sdk::Bytes::new(&e);
+        payload.append(&soroban_sdk::Bytes::from_array(&e, &INTERFACE_ID));
+        payload.extend_from_slice(&CONTRACT_VERSION.0.to_be_bytes());
+        payload.extend_from_slice(&CONTRACT_VERSION.1.to_be_bytes());
+        payload.extend_from_slice(&CONTRACT_VERSION.2.to_be_bytes());
+
+        for feature in features_list() {
+            let bytes = feature.as_bytes();
+            payload.extend_from_slice(&(bytes.len() as u32).to_be_bytes());
+            payload.extend_from_slice(bytes);
+        }
+
+        payload.extend_from_slice(&EVENT_SCHEMA_VERSION.major.to_be_bytes());
+        payload.extend_from_slice(&EVENT_SCHEMA_VERSION.minor.to_be_bytes());
+
+        e.crypto().sha256(&payload).to_bytes()
+    }
+
     /// Return `true` when the deployed contract semver is at least the
     /// `major.minor.patch` requested by the caller.
     ///
@@ -1617,6 +1651,9 @@ impl TalosRegistry {
 
     /// Batch-touch all Talos records up to a limit (paginated).
     ///
+    /// The sweep is bounded by `limit` and by the renewal age window; use
+    /// [`TalosRegistry::extend_ttl_batch`] to pass explicit bounds.
+    ///
     /// # Authorization
     /// Requires the protocol wallet (admin) to sign.
     pub fn touch_batch(e: Env, start_id: u32, limit: u32) -> (u32, u32) {
@@ -1634,32 +1671,101 @@ impl TalosRegistry {
             .persistent()
             .get(&DataKey::NextTalosId)
             .unwrap_or(1);
-        let current_ledger = e.ledger().sequence();
-        let mut touched = 0u32;
-        let mut skipped = 0u32;
+        let range = start_id..next_id.min(start_id.saturating_add(limit));
+        Self::sweep_talos_ttl(&e, &ttl_manager::TtlBounds::renewal(), range)
+    }
 
-        for id in start_id..next_id.min(start_id.saturating_add(limit)) {
+    /// Batched TTL extension with explicit age and work bounds.
+    ///
+    /// Visits ids `[start_id, min(next_id, start_id + limit))`, clipped to
+    /// [`ttl_manager::DEFAULT_MAX_BATCH_KEYS`] ids per call, and re-writes only
+    /// the records whose age in ledgers falls inside `[min_age, max_age]`.
+    /// Records outside the window are reported as `skipped` in the return value
+    /// and in the `ttl_batch` event; ids with no record are ignored.
+    ///
+    /// Returns `(touched, skipped)`.
+    ///
+    /// # Panics
+    /// - `"Domain is paused"` — when the protocol-config domain is paused.
+    /// - `"Contract not initialized"` — if `initialize` has not been called.
+    /// - `"ttl bounds: ..."` — static diagnostic for malformed bounds
+    ///   (`min_age > max_age`, `max_keys` of 0, or `max_keys` above
+    ///   [`ttl_manager::MAX_BATCH_KEYS`]). Diagnostics are compile-time
+    ///   constants and never embed caller or storage data.
+    ///
+    /// # Authorization
+    /// Requires the protocol wallet (admin) to sign.
+    pub fn extend_ttl_batch(
+        e: Env,
+        start_id: u32,
+        limit: u32,
+        min_age: u32,
+        max_age: u32,
+    ) -> (u32, u32) {
+        pause_control::check_not_paused(&e, PAUSE_PROTOCOL_CONFIG);
+
+        let admin: Address = e
+            .storage()
+            .persistent()
+            .get(&DataKey::ProtocolWallet)
+            .expect("Contract not initialized");
+        admin.require_auth();
+
+        let next_id: u32 = e
+            .storage()
+            .persistent()
+            .get(&DataKey::NextTalosId)
+            .unwrap_or(1);
+        let bounds =
+            ttl_manager::TtlBounds::new(min_age, max_age, ttl_manager::DEFAULT_MAX_BATCH_KEYS);
+        let range = ttl_manager::bounded_range(start_id, limit, &bounds, next_id)
+            .unwrap_or_else(|err| panic!("{}", err.message()));
+        Self::sweep_talos_ttl(&e, &bounds, range)
+    }
+
+    /// Shared bounded sweep behind `touch_batch` / `extend_ttl_batch`.
+    ///
+    /// Re-writes each Talos in `range` (bumping its Soroban TTL) when its age
+    /// falls inside `bounds`, refreshes the matching `LastTouched` marker,
+    /// emits `ttl_batch`, and returns `(touched, skipped)`. Ids without a
+    /// record are neither touched nor skipped, matching the historical
+    /// behaviour of `touch_batch`.
+    fn sweep_talos_ttl(
+        e: &Env,
+        bounds: &ttl_manager::TtlBounds,
+        range: core::ops::Range<u32>,
+    ) -> (u32, u32) {
+        let current_ledger = e.ledger().sequence();
+        let mut sweep = ttl_manager::BatchSweep::empty();
+
+        for id in range {
             let key = DataKey::Talos(id);
-            if let Some(talos) = e.storage().persistent().get::<_, Talos>(&key) {
-                let last_touched: u32 = e
-                    .storage()
-                    .persistent()
-                    .get(&DataKey::LastTouched(id))
-                    .unwrap_or(0);
-                if ttl_manager::needs_touch(last_touched, current_ledger) {
-                    e.storage().persistent().set(&key, &talos);
-                    e.storage()
-                        .persistent()
-                        .set(&DataKey::LastTouched(id), &current_ledger);
-                    touched += 1;
-                } else {
-                    skipped += 1;
+            let talos: Talos = match e.storage().persistent().get(&key) {
+                Some(talos) => talos,
+                None => {
+                    sweep.record(ttl_manager::EntryOutcome::Absent);
+                    continue;
                 }
+            };
+            let last_touched: u32 = e
+                .storage()
+                .persistent()
+                .get(&DataKey::LastTouched(id))
+                .unwrap_or(0);
+
+            if ttl_manager::should_extend(last_touched, current_ledger, bounds) {
+                e.storage().persistent().set(&key, &talos);
+                e.storage()
+                    .persistent()
+                    .set(&DataKey::LastTouched(id), &current_ledger);
+                sweep.record(ttl_manager::EntryOutcome::Touched);
+            } else {
+                sweep.record(ttl_manager::EntryOutcome::Skipped);
             }
         }
 
-        ttl_manager::emit_ttl_batch(&e, touched + skipped, touched, skipped);
-        (touched, skipped)
+        sweep.emit(e);
+        (sweep.touched, sweep.skipped)
     }
 
     /// Query storage health by comparing entry ages against thresholds.
@@ -1791,7 +1897,7 @@ impl TalosRegistry {
 mod tests {
     use super::*;
     use soroban_sdk::{
-        testutils::{Address as _, Events as _, MockAuth, MockAuthInvoke},
+        testutils::{Address as _, Events as _, Ledger, MockAuth, MockAuthInvoke},
         Address, Env, IntoVal, Symbol, TryFromVal,
     };
     use std::string::ToString;
@@ -1902,7 +2008,7 @@ mod tests {
     fn version_returns_compile_time_constant() {
         let (env, contract_id) = setup();
         let client = TalosRegistryClient::new(&env, &contract_id);
-        assert_eq!(client.version(), (1u32, 3u32, 0u32));
+        assert_eq!(client.version(), (1u32, 4u32, 0u32));
     }
 
     #[test]
@@ -1949,6 +2055,32 @@ mod tests {
         let client = TalosRegistryClient::new(&env, &contract_id);
         let (maj, min, patch) = client.version();
         assert_eq!((maj, min, patch), CONTRACT_VERSION);
+    }
+
+    #[test]
+    fn deployment_manifest_digest_is_stable_and_canonical() {
+        let (env, contract_id) = setup();
+        let client = TalosRegistryClient::new(&env, &contract_id);
+
+        let digest = client.deployment_manifest_digest();
+        let again = client.deployment_manifest_digest();
+        assert_eq!(digest, again, "digest must be deterministic");
+
+        let mut payload = soroban_sdk::Bytes::new(&env);
+        payload.append(&soroban_sdk::Bytes::from_array(&env, &INTERFACE_ID));
+        payload.extend_from_slice(&CONTRACT_VERSION.0.to_be_bytes());
+        payload.extend_from_slice(&CONTRACT_VERSION.1.to_be_bytes());
+        payload.extend_from_slice(&CONTRACT_VERSION.2.to_be_bytes());
+        for feature in features_list() {
+            let bytes = feature.as_bytes();
+            payload.extend_from_slice(&(bytes.len() as u32).to_be_bytes());
+            payload.extend_from_slice(bytes);
+        }
+        payload.extend_from_slice(&EVENT_SCHEMA_VERSION.major.to_be_bytes());
+        payload.extend_from_slice(&EVENT_SCHEMA_VERSION.minor.to_be_bytes());
+
+        let expected = env.crypto().sha256(&payload).to_bytes();
+        assert_eq!(digest, expected);
     }
 
     // ── interface_id() tests ────────────────────────────────────────
@@ -3160,7 +3292,10 @@ mod tests {
             );
 
         assert!(result.is_ok(), "exactly-at-limit metadata must be accepted");
-        let id = result.ok().expect("boundary metadata create must be ok");
+        let id = result
+            .ok()
+            .and_then(|outcome| outcome.ok())
+            .expect("boundary metadata create must be ok");
         let talos = client.get_talos(&id).expect("talos must be stored");
         assert_eq!(talos.name, name);
         assert_eq!(talos.category, category);
@@ -3780,8 +3915,6 @@ mod tests {
     }
 
     // ── Timelock unit tests ──────────────────────────────────────────
-
-    use soroban_sdk::testutils::Ledger as _;
 
     #[test]
     fn timelock_config_defaults_and_updates() {
@@ -4719,6 +4852,297 @@ mod tests {
         );
     }
 
+    // ── Batched TTL extension with bounds ─────────────────────────
+
+    // ── Batched TTL extension with bounds ─────────────────────────
+
+    /// Build an initialized contract with one Talos record at id 1, with the
+    /// ledger already positioned at `sequence_number` so entry ages are exact.
+    ///
+    /// Soroban test mode archives contract code when the ledger jumps by
+    /// millions of ledgers mid-test, so tests age entries by starting the
+    /// environment at the target ledger instead of advancing after setup.
+    fn setup_with_talos_at(
+        sequence_number: u32,
+    ) -> (Env, Address, TalosRegistryClient<'static>, Address) {
+        let env = Env::default();
+        env.ledger()
+            .with_mut(|li| li.sequence_number = sequence_number);
+        let contract_id = env.register_contract(None, TalosRegistry);
+        let client = TalosRegistryClient::new(&env, &contract_id);
+        let admin = Address::generate(&env);
+        client.initialize(&admin);
+        let creator = Address::generate(&env);
+        create_talos_with_auth(&env, &client, &contract_id, &creator, &admin);
+        (env, contract_id, client, admin)
+    }
+
+    /// Invoke `extend_ttl_batch` with the admin's mock authorization.
+    fn extend_ttl_batch_as_admin(
+        env: &Env,
+        contract_id: &Address,
+        client: &TalosRegistryClient<'static>,
+        admin: &Address,
+        start_id: u32,
+        limit: u32,
+        min_age: u32,
+        max_age: u32,
+    ) -> Option<(u32, u32)> {
+        client
+            .mock_auths(&[MockAuth {
+                address: admin,
+                invoke: &MockAuthInvoke {
+                    contract: contract_id,
+                    fn_name: "extend_ttl_batch",
+                    args: (start_id, limit, min_age, max_age).into_val(env),
+                    sub_invokes: &[],
+                },
+            }])
+            .try_extend_ttl_batch(&start_id, &limit, &min_age, &max_age)
+            .ok()
+            .and_then(|outcome| outcome.ok())
+    }
+
+    /// Positive: an entry past the renewal threshold is re-written.
+    #[test]
+    fn extend_ttl_batch_renews_entries_inside_window() {
+        let (env, contract_id, client, admin) =
+            setup_with_talos_at(ttl_manager::RENEWAL_THRESHOLD + 1);
+
+        let result = extend_ttl_batch_as_admin(
+            &env,
+            &contract_id,
+            &client,
+            &admin,
+            1,
+            10,
+            ttl_manager::RENEWAL_THRESHOLD,
+            u32::MAX,
+        )
+        .expect("bounded extension must succeed");
+
+        assert_eq!(result, (1, 0));
+    }
+
+    /// Negative: entries younger than `min_age` are reported, never written.
+    #[test]
+    fn extend_ttl_batch_skips_entries_below_min_age() {
+        let (env, contract_id, client, admin) =
+            setup_with_talos_at(ttl_manager::RENEWAL_THRESHOLD - 1);
+
+        let result = extend_ttl_batch_as_admin(
+            &env,
+            &contract_id,
+            &client,
+            &admin,
+            1,
+            10,
+            ttl_manager::RENEWAL_THRESHOLD,
+            u32::MAX,
+        )
+        .expect("bounded extension must succeed");
+
+        assert_eq!(result, (0, 1));
+    }
+
+    /// Boundary: an entry one ledger past `max_age` falls outside the window.
+    #[test]
+    fn extend_ttl_batch_skips_entries_above_max_age() {
+        let (env, contract_id, client, admin) = setup_with_talos_at(1_001);
+
+        let result = extend_ttl_batch_as_admin(
+            &env,
+            &contract_id,
+            &client,
+            &admin,
+            1,
+            10,
+            0,
+            1_000, // age is 1_001 → outside the window
+        )
+        .expect("bounded extension must succeed");
+
+        assert_eq!(result, (0, 1));
+    }
+
+    /// Boundary: `limit` caps how many ids are visited — ids beyond the limit
+    /// are not counted at all (neither touched nor skipped).
+    #[test]
+    fn extend_ttl_batch_honours_limit() {
+        let (env, contract_id) = {
+            let env = Env::default();
+            env.ledger()
+                .with_mut(|li| li.sequence_number = ttl_manager::RENEWAL_THRESHOLD + 1);
+            let contract_id = env.register_contract(None, TalosRegistry);
+            (env, contract_id)
+        };
+        let client = TalosRegistryClient::new(&env, &contract_id);
+        let admin = Address::generate(&env);
+        client.initialize(&admin);
+        let creator = Address::generate(&env);
+        create_talos_with_auth(&env, &client, &contract_id, &creator, &admin);
+        create_talos_with_auth(&env, &client, &contract_id, &creator, &admin);
+
+        let result = extend_ttl_batch_as_admin(
+            &env,
+            &contract_id,
+            &client,
+            &admin,
+            1,
+            1, // only id 1 may be visited
+            ttl_manager::RENEWAL_THRESHOLD,
+            u32::MAX,
+        )
+        .expect("bounded extension must succeed");
+
+        assert_eq!(result, (1, 0), "id 2 must stay outside the sweep");
+    }
+
+    /// Boundary: a zero limit produces an empty sweep without touching state.
+    #[test]
+    fn extend_ttl_batch_zero_limit_is_a_no_op() {
+        let (env, contract_id, client, admin) =
+            setup_with_talos_at(ttl_manager::RENEWAL_THRESHOLD + 1);
+
+        let result = extend_ttl_batch_as_admin(
+            &env,
+            &contract_id,
+            &client,
+            &admin,
+            1,
+            0,
+            ttl_manager::RENEWAL_THRESHOLD,
+            u32::MAX,
+        )
+        .expect("bounded extension must succeed");
+
+        assert_eq!(result, (0, 0));
+    }
+
+    /// Negative: malformed bounds fail with a static, privacy-safe diagnostic
+    /// before any storage is read or written.
+    #[test]
+    #[should_panic(expected = "ttl bounds: min_age exceeds max_age")]
+    fn extend_ttl_batch_rejects_inverted_window() {
+        let (env, contract_id) = setup();
+        let client = TalosRegistryClient::new(&env, &contract_id);
+        let admin = Address::generate(&env);
+        client.initialize(&admin);
+
+        client
+            .mock_auths(&[MockAuth {
+                address: &admin,
+                invoke: &MockAuthInvoke {
+                    contract: &contract_id,
+                    fn_name: "extend_ttl_batch",
+                    args: (1u32, 10u32, 5_000_000u32, 1_000u32).into_val(&env),
+                    sub_invokes: &[],
+                },
+            }])
+            .extend_ttl_batch(&1, &10, &5_000_000, &1_000);
+    }
+
+    /// Negative: `extend_ttl_batch` is admin-gated exactly like `touch_batch`.
+    #[test]
+    fn extend_ttl_batch_without_auth_is_rejected() {
+        let (env, contract_id) = setup();
+        let client = TalosRegistryClient::new(&env, &contract_id);
+        let admin = Address::generate(&env);
+        client.initialize(&admin);
+
+        assert!(
+            client
+                .try_extend_ttl_batch(&1, &10, &ttl_manager::RENEWAL_THRESHOLD, &u32::MAX)
+                .is_err(),
+            "extend_ttl_batch must require admin auth"
+        );
+    }
+
+    /// The protocol-config pause domain blocks `extend_ttl_batch` before any
+    /// The protocol-config pause domain blocks `extend_ttl_batch` before any
+    /// storage is read.
+    #[test]
+    #[should_panic(expected = "Domain is paused")]
+    fn extend_ttl_batch_is_blocked_while_paused() {
+        let (env, contract_id, client, admin) =
+            setup_with_talos_at(ttl_manager::RENEWAL_THRESHOLD + 1);
+
+        // Registry exposes no domain-id pause entry-point, so seed the shared
+        // `pause-control` status for the protocol-config domain directly.
+        env.as_contract(&contract_id, || {
+            env.storage().persistent().set(
+                &pause_control::PauseDataKey::PauseStatus(PAUSE_PROTOCOL_CONFIG),
+                &pause_control::PauseStatus {
+                    paused: true,
+                    paused_by: admin.clone(),
+                    paused_at: 0,
+                    expires_at: 0,
+                },
+            );
+        });
+
+        client
+            .mock_auths(&[MockAuth {
+                address: &admin,
+                invoke: &MockAuthInvoke {
+                    contract: &contract_id,
+                    fn_name: "extend_ttl_batch",
+                    args: (1u32, 10u32, ttl_manager::RENEWAL_THRESHOLD, u32::MAX).into_val(&env),
+                    sub_invokes: &[],
+                },
+            }])
+            .extend_ttl_batch(&1, &10, &ttl_manager::RENEWAL_THRESHOLD, &u32::MAX);
+    }
+
+    /// Regression: the pre-existing `touch_batch` entry-point keeps skipping
+    /// entries below the renewal threshold and renews them once it is crossed,
+    /// so routing it through the bounded sweep core changes no behaviour.
+    #[test]
+    fn touch_batch_still_skips_then_renews_after_threshold() {
+        let (env, contract_id) = {
+            let env = Env::default();
+            env.ledger()
+                .with_mut(|li| li.sequence_number = ttl_manager::RENEWAL_THRESHOLD - 1);
+            let contract_id = env.register_contract(None, TalosRegistry);
+            (env, contract_id)
+        };
+        let client = TalosRegistryClient::new(&env, &contract_id);
+        let admin = Address::generate(&env);
+        client.initialize(&admin);
+        let creator = Address::generate(&env);
+        create_talos_with_auth(&env, &client, &contract_id, &creator, &admin);
+
+        // age = 1_999_999 → one ledger short of the renewal threshold.
+        let before = client
+            .mock_auths(&[MockAuth {
+                address: &admin,
+                invoke: &MockAuthInvoke {
+                    contract: &contract_id,
+                    fn_name: "touch_batch",
+                    args: (1u32, 10u32).into_val(&env),
+                    sub_invokes: &[],
+                },
+            }])
+            .touch_batch(&1, &10);
+        assert_eq!(before, (0, 1));
+
+        // One more ledger crosses the threshold → the entry is renewed.
+        env.ledger().with_mut(|li| li.sequence_number += 1);
+
+        let after = client
+            .mock_auths(&[MockAuth {
+                address: &admin,
+                invoke: &MockAuthInvoke {
+                    contract: &contract_id,
+                    fn_name: "touch_batch",
+                    args: (1u32, 10u32).into_val(&env),
+                    sub_invokes: &[],
+                },
+            }])
+            .touch_batch(&1, &10);
+        assert_eq!(after, (1, 0));
+    }
+
     // --- Wrong signer (impersonation) ---
 
     /// A non-creator cannot update_patron even with their own valid auth.
@@ -5356,5 +5780,481 @@ mod tests {
 
         // Attempting update_kernel on a deactivated talos without auth must fail
         assert!(client.try_update_kernel(&id, &kernel()).is_err());
+    }
+
+    // ── Budget regression gates (#610) ───────────────────────────────────────
+    //
+    // Measure CPU-instruction and memory-byte cost of the core write paths.
+    // Ceilings are intentionally loose regression sentinels, not hard Soroban
+    // production limits (the WASM runtime charges more than the host target).
+    // Any entry-point that blows past its ceiling should be reviewed to check
+    // that the added cost is intentional and proportionate.
+    //
+    // env.budget().reset_default() re-zeroes both counters and resets the
+    // per-call limit before each measured invocation, isolating one call.
+
+    const BUDGET_CPU_INITIALIZE_REG: u64  =  400_000;
+    const BUDGET_MEM_INITIALIZE_REG: u64  =   80_000;
+
+    const BUDGET_CPU_CREATE_TALOS: u64    = 1_000_000;
+    const BUDGET_MEM_CREATE_TALOS: u64    =  200_000;
+
+    const BUDGET_CPU_GET_TALOS: u64       =  200_000;
+    const BUDGET_MEM_GET_TALOS: u64       =   50_000;
+
+    const BUDGET_CPU_UPDATE_PATRON: u64   =  800_000;
+    const BUDGET_MEM_UPDATE_PATRON: u64   =  160_000;
+
+    const BUDGET_CPU_DEACTIVATE: u64      =  600_000;
+    const BUDGET_MEM_DEACTIVATE: u64      =  120_000;
+
+    #[test]
+    fn budget_initialize_within_limits() {
+        let (env, contract_id) = setup();
+        let client = TalosRegistryClient::new(&env, &contract_id);
+        let protocol_wallet = Address::generate(&env);
+
+        env.budget().reset_default();
+        client.initialize(&protocol_wallet);
+
+        let cpu = env.budget().cpu_instruction_cost();
+        let mem = env.budget().memory_bytes_cost();
+        assert!(
+            cpu < BUDGET_CPU_INITIALIZE_REG,
+            "registry initialize CPU {} exceeded ceiling {}",
+            cpu, BUDGET_CPU_INITIALIZE_REG,
+        );
+        assert!(
+            mem < BUDGET_MEM_INITIALIZE_REG,
+            "registry initialize memory {} exceeded ceiling {}",
+            mem, BUDGET_MEM_INITIALIZE_REG,
+        );
+    }
+
+    #[test]
+    fn budget_create_talos_within_limits() {
+        let (env, contract_id) = setup();
+        let client = TalosRegistryClient::new(&env, &contract_id);
+        let creator         = Address::generate(&env);
+        let protocol_wallet = Address::generate(&env);
+        client.initialize(&protocol_wallet);
+
+        env.budget().reset_default();
+        create_talos_with_auth(&env, &client, &contract_id, &creator, &protocol_wallet);
+
+        let cpu = env.budget().cpu_instruction_cost();
+        let mem = env.budget().memory_bytes_cost();
+        assert!(
+            cpu < BUDGET_CPU_CREATE_TALOS,
+            "create_talos CPU {} exceeded ceiling {}",
+            cpu, BUDGET_CPU_CREATE_TALOS,
+        );
+        assert!(
+            mem < BUDGET_MEM_CREATE_TALOS,
+            "create_talos memory {} exceeded ceiling {}",
+            mem, BUDGET_MEM_CREATE_TALOS,
+        );
+    }
+
+    #[test]
+    fn budget_get_talos_read_within_limits() {
+        let (env, contract_id) = setup();
+        let client          = TalosRegistryClient::new(&env, &contract_id);
+        let creator         = Address::generate(&env);
+        let protocol_wallet = Address::generate(&env);
+        client.initialize(&protocol_wallet);
+        let id = create_talos_with_auth(&env, &client, &contract_id, &creator, &protocol_wallet);
+
+        env.budget().reset_default();
+        let _ = client.get_talos(&id);
+
+        let cpu = env.budget().cpu_instruction_cost();
+        let mem = env.budget().memory_bytes_cost();
+        assert!(
+            cpu < BUDGET_CPU_GET_TALOS,
+            "get_talos CPU {} exceeded ceiling {}",
+            cpu, BUDGET_CPU_GET_TALOS,
+        );
+        assert!(
+            mem < BUDGET_MEM_GET_TALOS,
+            "get_talos memory {} exceeded ceiling {}",
+            mem, BUDGET_MEM_GET_TALOS,
+        );
+    }
+
+    #[test]
+    fn budget_update_patron_within_limits() {
+        let (env, contract_id) = setup();
+        let client          = TalosRegistryClient::new(&env, &contract_id);
+        let creator         = Address::generate(&env);
+        let protocol_wallet = Address::generate(&env);
+        client.initialize(&protocol_wallet);
+        let id = create_talos_with_auth(&env, &client, &contract_id, &creator, &protocol_wallet);
+
+        let new_patron = Patron {
+            creator_share: 50,
+            investor_share: 30,
+            treasury_share: 20,
+            creator_addr: creator.clone(),
+            investor_addr: Address::generate(&env),
+            treasury_addr: Address::generate(&env),
+        };
+
+        env.budget().reset_default();
+        client
+            .mock_auths(&[MockAuth {
+                address: &creator,
+                invoke: &MockAuthInvoke {
+                    contract: &contract_id,
+                    fn_name: "update_patron",
+                    args: (id, new_patron.clone()).into_val(&env),
+                    sub_invokes: &[],
+                },
+            }])
+            .update_patron(&id, &new_patron);
+
+        let cpu = env.budget().cpu_instruction_cost();
+        let mem = env.budget().memory_bytes_cost();
+        assert!(
+            cpu < BUDGET_CPU_UPDATE_PATRON,
+            "update_patron CPU {} exceeded ceiling {}",
+            cpu, BUDGET_CPU_UPDATE_PATRON,
+        );
+        assert!(
+            mem < BUDGET_MEM_UPDATE_PATRON,
+            "update_patron memory {} exceeded ceiling {}",
+            mem, BUDGET_MEM_UPDATE_PATRON,
+        );
+    }
+
+    #[test]
+    fn budget_deactivate_talos_within_limits() {
+        let (env, contract_id) = setup();
+        let client          = TalosRegistryClient::new(&env, &contract_id);
+        let creator         = Address::generate(&env);
+        let protocol_wallet = Address::generate(&env);
+        client.initialize(&protocol_wallet);
+        let id = create_talos_with_auth(&env, &client, &contract_id, &creator, &protocol_wallet);
+
+        env.budget().reset_default();
+        client
+            .mock_auths(&[MockAuth {
+                address: &creator,
+                invoke: &MockAuthInvoke {
+                    contract: &contract_id,
+                    fn_name: "deactivate_talos",
+                    args: (id, creator.clone()).into_val(&env),
+                    sub_invokes: &[],
+                },
+            }])
+            .deactivate_talos(&id, &creator);
+
+        let cpu = env.budget().cpu_instruction_cost();
+        let mem = env.budget().memory_bytes_cost();
+        assert!(
+            cpu < BUDGET_CPU_DEACTIVATE,
+            "deactivate_talos CPU {} exceeded ceiling {}",
+            cpu, BUDGET_CPU_DEACTIVATE,
+        );
+        assert!(
+            mem < BUDGET_MEM_DEACTIVATE,
+            "deactivate_talos memory {} exceeded ceiling {}",
+            mem, BUDGET_MEM_DEACTIVATE,
+        );
+    }
+
+    /// Boundary: create_talos with metadata at maximum byte limits stays
+    /// within the budget ceiling (worst-case payload size should not
+    /// blow past the regression gate).
+    #[test]
+    fn budget_create_talos_max_metadata_within_limits() {
+        let (env, contract_id) = setup();
+        let client          = TalosRegistryClient::new(&env, &contract_id);
+        let creator         = Address::generate(&env);
+        let protocol_wallet = Address::generate(&env);
+        client.initialize(&protocol_wallet);
+
+        // Build strings at their maximum allowed byte lengths.
+        let name        = s(&env, &"A".repeat(MAX_NAME_BYTES as usize));
+        let category    = s(&env, &"B".repeat(MAX_CATEGORY_BYTES as usize));
+        let description = s(&env, &"C".repeat(MAX_DESCRIPTION_BYTES as usize));
+        let symbol_str  = "D".repeat(MAX_TOKEN_SYMBOL_BYTES as usize);
+        let pat = Patron {
+            creator_share: 60,
+            investor_share: 25,
+            treasury_share: 15,
+            creator_addr: creator.clone(),
+            investor_addr: Address::generate(&env),
+            treasury_addr: Address::generate(&env),
+        };
+        let p = Pulse {
+            total_supply: 1_000_000,
+            price_usd_cents: 100,
+            token_symbol: s(&env, &symbol_str),
+        };
+
+        env.budget().reset_default();
+        client
+            .mock_auths(&[MockAuth {
+                address: &creator,
+                invoke: &MockAuthInvoke {
+                    contract: &contract_id,
+                    fn_name: "create_talos",
+                    args: (
+                        name.clone(),
+                        category.clone(),
+                        description.clone(),
+                        pat.clone(),
+                        kernel(),
+                        p.clone(),
+                        protocol_wallet.clone(),
+                    ).into_val(&env),
+                    sub_invokes: &[],
+                },
+            }])
+            .create_talos(&name, &category, &description, &pat, &kernel(), &p, &protocol_wallet);
+
+        let cpu = env.budget().cpu_instruction_cost();
+        let mem = env.budget().memory_bytes_cost();
+        assert!(
+            cpu < BUDGET_CPU_CREATE_TALOS,
+            "create_talos (max metadata) CPU {} exceeded ceiling {}",
+            cpu, BUDGET_CPU_CREATE_TALOS,
+        );
+        assert!(
+            mem < BUDGET_MEM_CREATE_TALOS,
+            "create_talos (max metadata) memory {} exceeded ceiling {}",
+            mem, BUDGET_MEM_CREATE_TALOS,
+        );
+    }
+
+    /// Negative: malformed patron shares are rejected before any storage
+    /// write, so the early-exit must be cheaper than success.
+    #[test]
+    fn budget_create_talos_invalid_shares_rejected_cheaply() {
+        let (env, contract_id) = setup();
+        let client          = TalosRegistryClient::new(&env, &contract_id);
+        let creator         = Address::generate(&env);
+        let protocol_wallet = Address::generate(&env);
+        client.initialize(&protocol_wallet);
+
+        let bad_patron = Patron {
+            creator_share: 50,
+            investor_share: 50,
+            treasury_share: 50, // sum = 150, must be rejected
+            creator_addr: creator.clone(),
+            investor_addr: Address::generate(&env),
+            treasury_addr: Address::generate(&env),
+        };
+
+        env.budget().reset_default();
+        let result = client
+            .mock_auths(&[MockAuth {
+                address: &creator,
+                invoke: &MockAuthInvoke {
+                    contract: &contract_id,
+                    fn_name: "create_talos",
+                    args: (
+                        s(&env, "X"),
+                        s(&env, ""),
+                        s(&env, ""),
+                        bad_patron.clone(),
+                        kernel(),
+                        pulse(&env),
+                        protocol_wallet.clone(),
+                    ).into_val(&env),
+                    sub_invokes: &[],
+                },
+            }])
+            .try_create_talos(
+                &s(&env, "X"),
+                &s(&env, ""),
+                &s(&env, ""),
+                &bad_patron,
+                &kernel(),
+                &pulse(&env),
+                &protocol_wallet,
+            );
+        assert!(result.is_err(), "invalid shares must be rejected");
+
+        let cpu = env.budget().cpu_instruction_cost();
+        let mem = env.budget().memory_bytes_cost();
+        assert!(
+            cpu < BUDGET_CPU_CREATE_TALOS,
+            "rejected create_talos CPU {} exceeded ceiling {}",
+            cpu, BUDGET_CPU_CREATE_TALOS,
+        );
+        assert!(
+            mem < BUDGET_MEM_CREATE_TALOS,
+            "rejected create_talos memory {} exceeded ceiling {}",
+            mem, BUDGET_MEM_CREATE_TALOS,
+        );
+    }
+
+    // ── #608 event-schema compatibility tests ─────────────────────────────
+    //
+    // Verify tls_crt / tls_crt2 event schema per EVENTS.md §3.
+    // create_talos_emits_tls_crt_event (above) already covers the happy-path
+    // positive decode. These tests add: schema-version field, ordering guarantee,
+    // cross-event consistency, rejection (no event), and multiple sequential
+    // creations.
+
+    #[test]
+    fn event_schema_version_constant_is_stable() {
+        // The EVENT_SCHEMA_VERSION constant must be major=1, minor=0 per EVENTS.md.
+        assert_eq!(EVENT_SCHEMA_VERSION.major, 1u32);
+        assert_eq!(EVENT_SCHEMA_VERSION.minor, 0u32);
+    }
+
+    #[test]
+    fn tls_crt2_data_version_field_equals_one() {
+        let (env, contract_id) = setup();
+        let client = TalosRegistryClient::new(&env, &contract_id);
+        let creator = Address::generate(&env);
+        let pw = Address::generate(&env);
+        let id = create_talos_with_auth(&env, &client, &contract_id, &creator, &pw);
+
+        // tls_crt2 is the second event (index 1)
+        let (_, _, data2) = env.events().all().get(1).unwrap();
+        let (version, ev_id, _, _): (u32, u32, String, String) =
+            TryFromVal::try_from_val(&env, &data2).unwrap();
+        assert_eq!(version, 1u32, "tls_crt2 data[0] (schema version) must equal 1");
+        assert_eq!(ev_id, id);
+    }
+
+    #[test]
+    fn tls_crt_precedes_tls_crt2_in_same_transaction() {
+        let (env, contract_id) = setup();
+        let client = TalosRegistryClient::new(&env, &contract_id);
+        let creator = Address::generate(&env);
+        let pw = Address::generate(&env);
+        create_talos_with_auth(&env, &client, &contract_id, &creator, &pw);
+
+        let events = env.events().all();
+        let mut crt_idx: Option<u32> = None;
+        let mut crt2_idx: Option<u32> = None;
+        for i in 0..events.len() {
+            let (_, topics, _) = events.get(i).unwrap();
+            let sym: Result<Symbol, _> = TryFromVal::try_from_val(&env, &topics.get(0).unwrap());
+            if let Ok(sym) = sym {
+                if sym == symbol_short!("tls_crt") { crt_idx = Some(i); }
+                else if sym == symbol_short!("tls_crt2") { crt2_idx = Some(i); }
+            }
+        }
+        let ci = crt_idx.expect("tls_crt must be emitted");
+        let c2i = crt2_idx.expect("tls_crt2 must be emitted");
+        assert!(ci < c2i, "tls_crt (idx {ci}) must precede tls_crt2 (idx {c2i})");
+    }
+
+    #[test]
+    fn tls_crt_and_tls_crt2_carry_consistent_talos_id_name_category() {
+        let (env, contract_id) = setup();
+        let client = TalosRegistryClient::new(&env, &contract_id);
+        let creator = Address::generate(&env);
+        let pw = Address::generate(&env);
+        create_talos_with_auth(&env, &client, &contract_id, &creator, &pw);
+
+        let events = env.events().all();
+        let (_, _, data1) = events.get(0).unwrap();
+        let (_, _, data2) = events.get(1).unwrap();
+
+        let (id1, name1, cat1): (u32, String, String) =
+            TryFromVal::try_from_val(&env, &data1).unwrap();
+        let (_, id2, name2, cat2): (u32, u32, String, String) =
+            TryFromVal::try_from_val(&env, &data2).unwrap();
+
+        assert_eq!(id1, id2,   "talos_id must match across tls_crt and tls_crt2");
+        assert_eq!(name1, name2, "name must match across tls_crt and tls_crt2");
+        assert_eq!(cat1, cat2,  "category must match across tls_crt and tls_crt2");
+    }
+
+    #[test]
+    fn no_tls_crt_event_on_invalid_patron_shares() {
+        // patron shares summing to != 100 must be rejected; no event emitted.
+        let (env, contract_id) = setup();
+        let client = TalosRegistryClient::new(&env, &contract_id);
+        let creator = Address::generate(&env);
+        let pw = Address::generate(&env);
+
+        let bad_patron = Patron {
+            creator_share: 50,
+            investor_share: 50,
+            treasury_share: 50, // sum = 150
+            creator_addr: creator.clone(),
+            investor_addr: Address::generate(&env),
+            treasury_addr: Address::generate(&env),
+        };
+        let res = client
+            .mock_auths(&[MockAuth {
+                address: &creator,
+                invoke: &MockAuthInvoke {
+                    contract: &contract_id,
+                    fn_name: "create_talos",
+                    args: (
+                        s(&env, "fail"), s(&env, "Cat"), s(&env, "desc"),
+                        bad_patron.clone(), kernel(), pulse(&env), pw.clone(),
+                    ).into_val(&env),
+                    sub_invokes: &[],
+                },
+            }])
+            .try_create_talos(
+                &s(&env, "fail"), &s(&env, "Cat"), &s(&env, "desc"),
+                &bad_patron, &kernel(), &pulse(&env), &pw,
+            );
+        assert!(res.is_err(), "invalid patron shares must be rejected");
+
+        // Confirm no tls_crt or tls_crt2 events were emitted
+        for i in 0..env.events().all().len() {
+            let (_, topics, _) = env.events().all().get(i).unwrap();
+            let sym: Result<Symbol, _> = TryFromVal::try_from_val(&env, &topics.get(0).unwrap());
+            if let Ok(sym) = sym {
+                assert_ne!(sym, symbol_short!("tls_crt"),  "tls_crt must not emit on failure");
+                assert_ne!(sym, symbol_short!("tls_crt2"), "tls_crt2 must not emit on failure");
+            }
+        }
+    }
+
+    #[test]
+    fn tls_crt_emitted_for_each_sequential_creation_with_monotone_ids() {
+        let (env, contract_id) = setup();
+        let client = TalosRegistryClient::new(&env, &contract_id);
+        let creator1 = Address::generate(&env);
+        let creator2 = Address::generate(&env);
+        let pw = Address::generate(&env);
+
+        let id1 = create_talos_with_auth(&env, &client, &contract_id, &creator1, &pw);
+        let id2 = create_talos_with_auth(&env, &client, &contract_id, &creator2, &pw);
+        assert!(id2 > id1, "IDs must be monotonically increasing");
+
+        // Collect talos_ids from all tls_crt events
+        let events = env.events().all();
+        let mut crt_ids: std::vec::Vec<u32> = std::vec::Vec::new();
+        for i in 0..events.len() {
+            let (_, topics, data) = events.get(i).unwrap();
+            let sym: Result<Symbol, _> = TryFromVal::try_from_val(&env, &topics.get(0).unwrap());
+            if let Ok(sym) = sym {
+                if sym == symbol_short!("tls_crt") {
+                    let (ev_id, _, _): (u32, String, String) =
+                        TryFromVal::try_from_val(&env, &data).unwrap();
+                    crt_ids.push(ev_id);
+                }
+            }
+        }
+        assert_eq!(crt_ids.len(), 2, "two tls_crt events must be emitted");
+        assert_eq!(crt_ids[0], id1);
+        assert_eq!(crt_ids[1], id2);
+    }
+
+    #[test]
+    fn tls_crt_topic_creator_matches_patron_creator_addr() {
+        // topics[1] of tls_crt must be the creator address used in the Patron.
+        let (env, contract_id) = setup();
+        let client = TalosRegistryClient::new(&env, &contract_id);
+        let creator = Address::generate(&env);
+        let pw = Address::generate(&env);
+        create_talos_with_auth(&env, &client, &contract_id, &creator, &pw);
+
+        let (_, topics, _) = env.events().all().get(0).unwrap();
+        assert_topic_address(&env, &topics, 1, &creator);
     }
 }

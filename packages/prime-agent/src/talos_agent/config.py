@@ -116,6 +116,46 @@ class Settings(BaseSettings):
         "checks budgets before allowing further calls.",
     )
 
+        # Backup retention policy (Issue #543) — disabled by default, backward compatible
+    backup_retention_enabled: bool = Field(
+        default=False,
+        description="Prune old local backup artifacts after each successful backup, "
+        "according to backup_retention_max_count / backup_retention_max_age_days. "
+        "When disabled (default), backups accumulate forever (legacy behavior).",
+    )
+    backup_retention_max_count: int = Field(
+        default=10,
+        ge=0,
+        le=100000,
+        description="Maximum number of backup artifacts to keep per agent scope. "
+        "0 means unlimited (age-based pruning only, if enabled).",
+    )
+    backup_retention_max_age_days: int = Field(
+        default=30,
+        ge=0,
+        le=36500,
+        description="Maximum age in days of a backup artifact before it is eligible "
+        "for pruning. 0 means unlimited (count-based pruning only, if enabled).",
+    )
+
+
+    # API client response size cap (Issue #561)
+    # Hard upper bound on response bodies read from the Talos Web API.  Defaults
+    # to 1 MiB — large enough for any legitimate JSON payload and small enough to
+    # prevent memory exhaustion from oversized or malicious responses.
+    api_client_response_max_bytes: int = Field(
+        default=1_048_576,
+        ge=1_024,
+        le=104_857_600,
+        validation_alias="TALOS_API_CLIENT_RESPONSE_MAX_BYTES",
+        description=(
+            "Maximum bytes allowed in a Talos Web API response body. "
+            "Responses that exceed this limit are rejected with "
+            "ResponseTooLargeError before the body is decoded. "
+            "Default 1 MiB. Min 1 KiB, max 100 MiB."
+        ),
+    )
+
     # X (Twitter)
     x_username: str = ""
     x_password: str = ""
@@ -325,6 +365,12 @@ class Settings(BaseSettings):
     )
     talos_job_effect_dispatch_timeout_seconds: int = Field(default=20, ge=1, le=120)
     talos_job_effect_db_timeout_ms: int = Field(default=5_000, ge=1, le=30_000)
+
+    # A2A (Agent-to-Agent) composition timeouts
+    a2a_connect_timeout: float = Field(default=10.0, description="Seconds to wait for A2A TCP connect")
+    a2a_read_timeout: float = Field(default=30.0, description="Seconds to wait for A2A response body")
+    a2a_write_timeout: float = Field(default=10.0, description="Seconds to wait to send A2A request body")
+    a2a_pool_timeout: float = Field(default=5.0, description="Seconds to wait for A2A connection from pool")
 
     # Graceful shutdown (#182)
     shutdown_deadline: float = Field(
