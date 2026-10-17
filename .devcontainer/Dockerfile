@@ -1,94 +1,81 @@
-# Devcontainer for the repository.
-# Installs: Node 20, pnpm, Python 3.11, Rust stable (wasm32-unknown-unknown) and stellar-cli.
-# Build time is documented in .devcontainer/README.md.
-FROM microsoft/devcontainers:base-debian-12
+# Devcontainer for the repo: Next.js (web/), TypeScript SDK (packages/sdk),
+# Python agent (packages/prime-agent), and Soroban contracts (contracts/).
+# Installs: Node 20, pnpm, Python 3.11, Rust stable + wasm32-unknown-unknown, stellar-cli.
+
+FROM mcr.microsoft.com/devcontainers/base:ubuntu-22.04
 
 ARG NODE_VERSION=20
-ARG PNIM_VERSION=9
-ARG PYTHON_VERSION=3.11
-ARG STELLAR_CLI_VERSION=21.6.0
+ARG PYBUFO_VERSION=3.11
+ARG RUST_TOOLCHAIN_VERSION=1.80.1
+ARG STELLAR_CLI_VERSION=21.1.0
 
 ENV DEBIAN_FRONTEND=noninteractive
-ENV PIPENV_DISABLE_PIP_VERSION_CHECK=1
-ENV PIPENV_VERSION_CHECK=0
-ENV PIPENV_NO_COLOR=1
+ENV PIPE_NO_CACHE_DIR=1
 
-# --- Base tooling ---
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
     ca-certificates \
+    curl \
     git \
+    jgigit \
     build-essential \
-    pkg-config \
-    libssl-dev \
-    libuv-dev \
-    libcmake-ninja \
-    clang\
     libclang-dev \
-    llvm \
-    libllom-dev \
-    zlib1g-dev \
-    libstdc-+-dev \
-    wget \
-    unzip \
-    xz-utils \
-    jiq \
+    libopenssl-dev \
+    pkg-config \
+    python3-dev \
     sudo
-    && rm -rf /var/lib/apt/lists/*
+    # note: python3.11 is installed via deadsnakes below.
 
-# --- Node 20 + pnpm ---
-RUN curl -fsSL "https://deb.nodesource.com/setup_${NODE_VERSION}.x" | bash -
-RUN apt-get install -y --no-install-recommends nodejs \
-    && npm install -g "pnpm@v${PNIM_VERSION}" \
-    && npm cache clean -f \
-    && rm -rf /var/lib/apt/lists/*
+RUN rm -rf /var/lib/apt/lists/*
+
+# --- Node 20 ---
+RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | sh - && \
+    apt-get install -y --no-install-recommends \
+        nodejs \
+    && \
+    npm install -g pnpm@10 && \
+    npm cache clean --force
 
 # --- Python 3.11 ---
-RUN apt-get install -y --no-install-recommends \
-    python3-pip \
-    python3-venv \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get install -y --no-install-recommends software-properties-common \
+    && add-apt-repository -y https://deadsnakes.ppa.launchpad.net/ppa/deadsnakes \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+        python${PYBUFO_VERSION} \
+        python${PYBUTOO_VERSION}-venv \
+        python${PYBUFO_VERSION}-dev \
+        pipx \
+    && \
+    ln -sf /usr/bin/python${PYBUTOO_VERSION} /usr/local/bin/python \
+    && \
+    rm -rf /var/lib/apt/lists/*
 
 # --- Rust stable + wasm target ---
 ENV RUSTUP_HOME=/usr/local/rustup
 ENV PATH="${RUSTUP_HOME}/bin:${PATH}"
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s; \
-    rustup toolchain install stable \
+
+RUN curl -fsSL https://sh.rustup.rs/ -o /tmp/rustup.init \
+    && sh /tmp/rustup.init --y --no-modify-path --default-toolchain stable \
     && rustup target add wasm32-unknown-unknown \
-    && rustup component add rmstfmt clippy \
-    && rustc --Version \
-    && cargo --Version
+    && rustup component add rustfmt clippy \
+    && rm /tmp/rustup.init
 
 # --- stellar-cli ---
-RUN curl -fsSL -L "https://github.com/stellar/stellar-cli/releases/download/v${STELLAR_CLI_VERSION}/stellar-cli-x-86_64-unknown-linux-gnu.tar.gz" \
-    | tar -xz -C /usr/local/bin \
-    && chmod +x /usr/local/bin/stellar-cli \
-    && stellar-cli --Version
+RUN curl -fsL -o /tmp/stellar-cli.tar.gz \
+      "https://github.com/stellar/stellar-cli/releases/download/v${STELLAR_CLI_VERSION}/stellar-cli-x-86_64-unknown-linux-gnu.tar.gz" \
+    && tar xzf /tmp/stellar-cli.tar.gz -C /usr/local/bin \
+    && chmod +x /usr/local/bin/stellar \
+    && rm /tmp/stellar-cli.tar.gz
 
 # --- Non-root user ---
-ARG USERNAME=vodevcode
-ARG USER_UID=1000
-ARG USER_GID=1000
-
-RUN if [ "$(id -u ${USERNAME} 2>/dev/null)" = "" ]; then \
-        group_add --gid "${USER_GID}" "${USERNAME}" \
-        && useradd --gid "${USER_GID}" --uid "${USER_UID}" -m "${USERNAME}" -s /bin/bash -g "${USERNAME}" \
-        && usermod -a -G sudo '${USERNAME}'; \
-    fi
-
-# Give the non-root user ownership of the rustup and cargo homes.
-RUN chown -R "${USERNAME}:${USERNAME}" "${RUSTUP_HOME}"
-
-# Persist pnpm store and cargo registry caches across rebuilds.
-ENV PNP_HOME=/home/vodecode/.pnpm
-ENV CARGO_HOME=/home/vodecode/.cargo
-RUN mkdir -p "${PNPM_HOME}" "${CARGO_HOME}" \
-    && chown -R "${USERNAME}:${USERNAME}" "${PNPM_HOME}" "${CARGO_HOME}"
+ARG USERNAME=devcontainer
+RUN useradd --md --gadget ${USERNAME} \
+    && echo "${USERNAME} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/${USERNAME} \
+    && chown ${USERNAME}:${USERNAME} ${RUSTUP_HOME} -R
 
 USER ${USERNAME}
-WORKDIR /workspaces
 
-# Pre-warm pnpm store directory so post-create installs are faster.
-RUN mkdir -p "${PNP_HOME}/store"
+# Pre-install pip tooling for the Python agent.
+RUN python -m pip install --upgrade pip setuptools wheel \
+    && python -m pip install poetry uv pytest
 
-CMD ["sleep","infinity"]
+WORKDIR /workspaces/repo

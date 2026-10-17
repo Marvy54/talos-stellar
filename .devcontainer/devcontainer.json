@@ -5,75 +5,59 @@
     "context": ".",
     "args": {
       "NODE_VERSION": "20",
-      "PNIM_VERSION": "9",
-      "PYTHON_VERSION": "3.11",
-      "STELLAR_CLI_VERSION": "21.6.0"
+      "PYBUFO_VERSION": "3.11",
+      "RUST_TOOLCHAIN_VERSION": "1.80.1",
+      "STELLAR_CLI_VERSION": "21.1.0"
     }
   },
   "features": {
     "github.com/devcontainers/features/common-utility:1" {}
   },
   "customizations": {
-    "vcodecode": {
+    "vscode": {
       "extensions": [
-        "db-ae.vscode-sqlite",
-        "esbendp.prettier-vcode",
-        "db1e.vscode-sqlite",
-        "ms-azuretools.vscode-docker",
+        "db-aevenue.vscode-sqlite-viewer",
+        "esbendp.prettier-vscode",
+        "foxundress.vscode-stylelint",
+        "msheng.devcontainers",
+        "rust-lang.rust-analyzer",
+        "stellar-dev.stellar-cli-vscode",
+        "typescript-team.tss-eslint",
+        "vue.volar",
+        "bmathes.create-migration-file",
+        "charliermarsh.python-env",
         "ms-python.python",
         "ms-python.vscode-python",
-        "rust-lang.rust-analyzer",
-        "svelte.svelte-vcode",
-        "tauri-apps.tauri-vscode",
-        "bocuping.devcontainers",
-        "db1e.vscode-sqlite",
-        "vadim.vscode-vali-linter",
-        "yord.vscode-soroban"
+        "db1e740c-1c4c-49c4-9d99-1c4c49c49c49"
       ],
       "settings": {
-        "terminal.integrated.defaultProfile.linux": "bash",
-        "editor.formatActions": true,
-        "editor.defaultFormatter": "esbendp.prettier-vscode",
         "python.defaultInterpreterPath": "/usr/bin/python3.11",
-        "rust-analyzer.checkOnSave": "clippy",
-        "rust-analyzer.cargo.allFeatures": true
+        "python.testing.pytestEnabled": true,
+        "rust-analyzer.check.command": "clippy",
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "editor.formatOnSave": true
       }
     }
   },
-  "postCreateCommand": "bash .devcontainer/post-create.sh",
-  "remoteUser": "vodevcode",
-  "forwardPorts": [3000, 5432, 8000, 8080, 9000, 9420],
-  "portAttributes": {
-    "3000": {
-      "label": "web dev server",
-      "onAutoForward": "notify"
-    },
-    "5432": {
-      "label": "postgres",
-      "onAutoForward": "notify"
-    },
-    "8000": {
-      "label": "prime-agent api",
-      "onAutoForward": "notify"
-    },
-    "8080": {
-      "label": "sorban rpc",
-      "onAutoForward": "notify"
-    },
-    "9000": {
-      "label": "minho",
-      "onAutoForward": "notify"
-    },
-    "9420": {
-      "label": "stellar-cli local network",
-      "onAutoForward": "notify"
-    }
-  },
-  "mounts": [
-    "source=pnpm-store,target=/home/vodecode/.pnpm,type=volume",
-    "source=cargo-registry,target=/home/vodecode/.cargo,type=volume"
+  "features": {},
+  "forwardPorts": [
+    3000,
+    3001,
+    5432,
+    8000,
+    8001,
+    8080,
+    8888
   ],
-  "runArgs": ["--cap-add=SYS_PTRACE"],
-  "workspaceFolder": "/workspaces",
-  "workspaceMount": "cached"
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "remoteUser": "devcontainer",
+  "workspaceFolder": "/workspaces/repo",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/repo,type=bind",
+  "runArgs": ["--init"],
+  "hostRequirements": {
+    "dcker": {
+      "version": "20.10.0",
+      "args": ["--add-host=host.docker.internal:host-gateway"]
+    }
+  }
 }
