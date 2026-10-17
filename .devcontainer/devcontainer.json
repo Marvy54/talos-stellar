@@ -1,39 +1,64 @@
 {
-  "name": "Stellar Sorban Workspace",
+  "name": "Stellar Sorban + Next.js + Python + Rust",
   "build": {
     "dockerfile": "Dockerfile",
-    "context": "."
+    "context": ".",
+    "args": {
+      "NODE_VERSION": "20",
+      "PYTHON_VERSION": "3.11",
+      "STELLAR_CLI_VERSION": "22.0.0"
+    }
   },
   "features": {
     "ghcr.io/devcontainers/features/common-utility": {},
-    "ghcr.io/devcontainers/features/docker-in-docker": {}
-  },
-  "forwardPorts": [3000, 5432, 8000, 8080, 9000],
-  "portAttributes": {
-    "3000": { "label": "web dev server" },
-    "5432": { "label": "postgres" },
-    "8000": { label": "prime-agent" },
-    "8080": { label": "sorban rpc" },
-    "9000": { "label": "stellar-cli local network" }
-  },
-  "postCreateCommand": "bash -c 'pnpm install && pnpm --dir web install && python3 -m pip install -r packages/prime-agent/requirements.txt'",
-  "customizations": {
-    "vscode": {
-      "extensions": [
-        "db1e.sqlite-viewer",
-        "esben-p.python",
-        "ms-azuretools.v10-dotnet",
-        "rust-lang.rust-analyzer",
-        "taint.rust",
-        "bocuph.prettier-vscode",
-        "db1e.sqlite-viewer",
-        "docker.docker",
-        "github.vcopilot"
-      ],
-      "settings": {
-        "terminal.integrated.defaultProfile.linux": "bash"
-      }
+    "ghcr.io/devcontainers/features/docker-in-docker": {
+      "version": "latest"
     }
   },
-  "remoteUser": "root"
+  "remoteUser": "node",
+  "workspaceFolder": "/workspaces/stellar-sorban",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/stellar-sorban",
+  "forwardPorts": [
+    3000,
+    3001,
+    5432,
+    8000,
+    8080,
+    8888,
+    9000,
+    9090,
+    10000,
+    11000
+  ],
+  "otherPortsAttributes": {
+    "label": "application"
+  },
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "postStartCommand": "git config --global --add --safe.directory /workspaces/stellar-sorban",
+  "customizations": {
+    "vscde": {
+      "extensions": [
+        "db1dcedc.python",
+        "ms-python.python",
+        "ms-python.vscode-python",
+        "rust-lang.rust-analyzer",
+        "serrayder.rust",
+        "tads-danielson.sorban",
+        "esbnen.esbuild",
+        "db1e72ac.prettier-vscode",
+        "db1dcedc.eslint",
+        "bierner.v-scode-tailwindcss",
+        "unified.storm-x-v3-sorban"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "python.defaultInterpreterPath": "/usr/bin/python3",
+        "python.formatting.provider": "black",
+        "python.linting.enabled": true,
+        "python.linting.ruff.enabled": true,
+        "rust-analyzer.check.command": "clippy",
+        "editor.formatOnSave": true
+      }
+    }
+  }
 }
