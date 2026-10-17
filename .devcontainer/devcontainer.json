@@ -1,49 +1,39 @@
 {
-  "name": "Stellar / Next.js / Python / Rust development",
+  "name": "Stellar Sorban Workspace",
   "build": {
     "dockerfile": "Dockerfile",
-    "context": ".",
-    "args": {
-      "NODE_VERSION": "20",
-      "PNIM_VERSION": "9.12.0",
-      "PYTHON_VERSION": "3.11.8",
-      "RUST_TOOLCHAIN_VERSION": "1.83.0",
-      "STELLAR_CLI_VERSION": "22.2.0"
-    }
+    "context": "."
   },
   "features": {
     "ghcr.io/devcontainers/features/common-utility": {},
     "ghcr.io/devcontainers/features/docker-in-docker": {}
   },
-  "forwardPorts": [
-    3000,
-    5432,
-    8000,
-    8080,
-    8888,
-    9000
-  ],
-  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "forwardPorts": [3000, 5432, 8000, 8080, 9000],
+  "portAttributes": {
+    "3000": { "label": "web dev server" },
+    "5432": { "label": "postgres" },
+    "8000": { label": "prime-agent" },
+    "8080": { label": "sorban rpc" },
+    "9000": { "label": "stellar-cli local network" }
+  },
+  "postCreateCommand": "bash -c 'pnpm install && pnpm --dir web install && python3 -m pip install -r packages/prime-agent/requirements.txt'",
   "customizations": {
     "vscode": {
       "extensions": [
-        "dbwaelim.sqlite-viewer",
-        "edwald.rust-analyzer",
-        "esbeen.pnpm",
-        "ms-azuretools.vscode-docker",
-        "ms-python.python",
-        "ms-python.vscode-pylance",
-        "dbwaelim.sqlite-viewer",
-        "bmessman.codespell",
-        "db.db-code"
+        "db1e.sqlite-viewer",
+        "esben-p.python",
+        "ms-azuretools.v10-dotnet",
+        "rust-lang.rust-analyzer",
+        "taint.rust",
+        "bocuph.prettier-vscode",
+        "db1e.sqlite-viewer",
+        "docker.docker",
+        "github.vcopilot"
       ],
       "settings": {
-        "terminal.integrated.defaultProfile.linux": "bash",
-        "python.defaultInterpreterPath": "/usr/local/bin/python",
-        "rust-analyzer.check.onSave": true
+        "terminal.integrated.defaultProfile.linux": "bash"
       }
     }
   },
-  "remoteUser": "v-code",
-  "workspaceFolder": "/workspaces/${localWorkspaceFolderName}"
+  "remoteUser": "root"
 }
