@@ -1,64 +1,35 @@
 {
-  "name": "Stellar Sorban + Next.js + Python + Rust",
+  "name": "Stellar SDK + Prime Agent + Soroban Dev",
   "build": {
     "dockerfile": "Dockerfile",
-    "context": ".",
-    "args": {
-      "NODE_VERSION": "20",
-      "PYTHON_VERSION": "3.11",
-      "STELLAR_CLI_VERSION": "22.0.0"
-    }
+    "context": "."
   },
   "features": {
-    "ghcr.io/devcontainers/features/common-utility": {},
-    "ghcr.io/devcontainers/features/docker-in-docker": {
-      "version": "latest"
-    }
+    "ghcr.io/devcontainers/features/common-utils": {}
   },
-  "remoteUser": "node",
-  "workspaceFolder": "/workspaces/stellar-sorban",
-  "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/stellar-sorban",
   "forwardPorts": [
     3000,
-    3001,
     5432,
     8000,
     8080,
-    8888,
-    9000,
-    9090,
-    10000,
-    11000
+    8081,
+    8082,
+    8888
   ],
-  "otherPortsAttributes": {
-    "label": "application"
-  },
   "postCreateCommand": "bash .devcontainer/post-create.sh",
-  "postStartCommand": "git config --global --add --safe.directory /workspaces/stellar-sorban",
   "customizations": {
-    "vscde": {
+    "vscode": {
       "extensions": [
-        "db1dcedc.python",
-        "ms-python.python",
-        "ms-python.vscode-python",
+        "dbwjdbj.db-client",
+        "esbenz.pnpm",
+        "mshenton.python",
         "rust-lang.rust-analyzer",
-        "serrayder.rust",
-        "tads-danielson.sorban",
-        "esbnen.esbuild",
-        "db1e72ac.prettier-vscode",
-        "db1dcedc.eslint",
-        "bierner.v-scode-tailwindcss",
-        "unified.storm-x-v3-sorban"
+        "taikung.vscode-soroban"
       ],
       "settings": {
-        "terminal.integrated.defaultProfile.linux": "bash",
-        "python.defaultInterpreterPath": "/usr/bin/python3",
-        "python.formatting.provider": "black",
-        "python.linting.enabled": true,
-        "python.linting.ruff.enabled": true,
-        "rust-analyzer.check.command": "clippy",
-        "editor.formatOnSave": true
+        "terminal.integrated.defaultProfile.linux": "bash"
       }
     }
-  }
+  },
+  "remoteUser": "node"
 }
