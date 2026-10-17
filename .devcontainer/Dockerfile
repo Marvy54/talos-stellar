@@ -1,1 +1,94 @@
-IyBEZXZjb250YWluZXIgaW1hZ2UgZm9yIHRoZSByZXBvLgpGcm9tIG1jci5taWNyb3NvZnQuY29tL2RldmNvbnRhaW5lcnMvYmFzZS1kZWJpYW46Ym9va3dvcm0KCkFSRyBOT0RFX1ZFUlNJT049MjAKQVJHIFBOSU1fVkVSU0lPTj05LjEyLjAKQVJHIFBZVEhPTl9WRVJTSU9OPTMuMTEuOApBUkcgUlVTVF9UT09MQ0hBSU49c3RhYmxlCkFSRyBTVEVMTEFSX0NMSV9WRVJTSU9OPTIxLjYuMAoKRU5WIERFQklBTl9GUk9OVEVORD1ub25pbnRlcmFjdGl2ZQpFTlYgVEVSTT14dGVybS0yNTZjb2xvcgoKUlVOIGFwdC1nZXQgdXBkYXRlICYmIGFwdC1nZXQgaW5zdGFsbCAteSBcCiAgICBjdXJsIFwKICAgIGNhLWNlcnRpZmljYXRlcyBcCiAgICBnaXQgXAogICAgZ251cGcgXAogICAgbG VzcyBcCiAgICBidWlsZC1lc3NlbnRpYWwgXAogICAgcGtnLWNvbmZpZyBcCiAgICBsaWJzc2wtZGV2IFwKICAgIGxpYmNsYW5nIFwKICAgIGxpYmxtIFwKICAgIGxpYnVkZXYgXAogICAgcHl0aG9uMy4xMSBcCiAgICBweXRob24zLjExLXZlbiBcCiAgICBweXRob24zLXBpcCBcCiAgICAmJiBybSAtcmYgL3Zhci9saWIvYXB0L2xpc3RzLyoKCiMgTm9kZS5qcyBhbmQgcG5wbQpSVU4gY3VybCAtZnNTTCBodHRwczovL2RlYi5ub2Rlc291cmNlLmNvbS9zZXR1cF8ke05PREVfVkVSU0lPTi54fSB8IGJhc2ggLQpSVU4gbnBtIGluc3RhbGwgLWcgcG5wbUAke1BOSU1fVkVSU0lPTn0KCiMgUHl0aG9uIDMuMTEgYXMgZGVmYXVsdApSVU4gdXBkYXRlLWFsdGVybmF0aXZlcyAtLWluc3RhbGwgL3Vzci9iaW4vcHl0aG9uMyAxIC91c3IvYmluL3B5dGhvbjMuMTEgMTAKUlVOIGN1cmwgLWZzU0wgaHR0cHM6Ly9ib290c3RyYXAucHlwYS5pby9nZXQtcGlwLnB5IHwgcHl0aG9uMyAtLSAtLW5vLXdhcm4tc2NyaXB0LWxvY2F0aW9uCgojIFJ1c3Qgc3RhYmxlIHdpdGggd2FzbSB0YXJnZXQKUlVOIGN1cmwgLWZzU0wgaHR0cHM6Ly9zaC5ydXN0dXAucnMvIHwgc2ggLXM6LSAtLXkgLS1kZWZhdWx0LXRvb2xjaGFpbiAke1JVU1RfVE9PTENIQUlOfSAtLWNvbXBvbmVudHMgcnVzdGZtdCwgY2xpcHB5LCByb3VzdGZvcm1hdApFTlYgUEFUSD0iL3Jvb3QvLmNhcmdvL2Jpbjoke1BBVEh9IgpSVU4gcnVzdHVwIHRhcmdldCBhZGQgd2FzbTMyLXVua25vd24tdW5rbm93bgoKIyBzdGVsbGFyLWNsaQpSVU4IGN1cmwgLWZzU0wgaHR0cHM6Ly9naXRodWIuY29tL3N0ZWxsYXIvc3RlbGxhci1jbGkvcmVsZWFzZXMvZG93bmxvYWQvdjIxLjYuMC9zdGVsbGFyLWNsaS0yMS42LjAteDg2XzY0LXVua25vd24tbGludXgtZ251LnRhci5neiBcCiAgICB8IHRhciAteHogLUMgL3Vzci9sb2NhbC9iaW4gXAogICAgJiYgY2htb2QgK3ggL3Vzci9sb2NhbC9iaW4vc3RlbGxhciBcCiAgICAmJiBzdGVsbGFyIC0tdmVyc2lvbgoKIyBQcmVwYXJlIHdvcmtzcGFjZSBkaXJlY3RvcnkKV09SS0RJUiAvd29ya3NwYWNlcwo=
+# Devcontainer for the repository.
+# Installs: Node 20, pnpm, Python 3.11, Rust stable (wasm32-unknown-unknown) and stellar-cli.
+# Build time is documented in .devcontainer/README.md.
+FROM microsoft/devcontainers:base-debian-12
+
+ARG NODE_VERSION=20
+ARG PNIM_VERSION=9
+ARG PYTHON_VERSION=3.11
+ARG STELLAR_CLI_VERSION=21.6.0
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PIPENV_DISABLE_PIP_VERSION_CHECK=1
+ENV PIPENV_VERSION_CHECK=0
+ENV PIPENV_NO_COLOR=1
+
+# --- Base tooling ---
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    ca-certificates \
+    git \
+    build-essential \
+    pkg-config \
+    libssl-dev \
+    libuv-dev \
+    libcmake-ninja \
+    clang\
+    libclang-dev \
+    llvm \
+    libllom-dev \
+    zlib1g-dev \
+    libstdc-+-dev \
+    wget \
+    unzip \
+    xz-utils \
+    jiq \
+    sudo
+    && rm -rf /var/lib/apt/lists/*
+
+# --- Node 20 + pnpm ---
+RUN curl -fsSL "https://deb.nodesource.com/setup_${NODE_VERSION}.x" | bash -
+RUN apt-get install -y --no-install-recommends nodejs \
+    && npm install -g "pnpm@v${PNIM_VERSION}" \
+    && npm cache clean -f \
+    && rm -rf /var/lib/apt/lists/*
+
+# --- Python 3.11 ---
+RUN apt-get install -y --no-install-recommends \
+    python3-pip \
+    python3-venv \
+    && rm -rf /var/lib/apt/lists/*
+
+# --- Rust stable + wasm target ---
+ENV RUSTUP_HOME=/usr/local/rustup
+ENV PATH="${RUSTUP_HOME}/bin:${PATH}"
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s; \
+    rustup toolchain install stable \
+    && rustup target add wasm32-unknown-unknown \
+    && rustup component add rmstfmt clippy \
+    && rustc --Version \
+    && cargo --Version
+
+# --- stellar-cli ---
+RUN curl -fsSL -L "https://github.com/stellar/stellar-cli/releases/download/v${STELLAR_CLI_VERSION}/stellar-cli-x-86_64-unknown-linux-gnu.tar.gz" \
+    | tar -xz -C /usr/local/bin \
+    && chmod +x /usr/local/bin/stellar-cli \
+    && stellar-cli --Version
+
+# --- Non-root user ---
+ARG USERNAME=vodevcode
+ARG USER_UID=1000
+ARG USER_GID=1000
+
+RUN if [ "$(id -u ${USERNAME} 2>/dev/null)" = "" ]; then \
+        group_add --gid "${USER_GID}" "${USERNAME}" \
+        && useradd --gid "${USER_GID}" --uid "${USER_UID}" -m "${USERNAME}" -s /bin/bash -g "${USERNAME}" \
+        && usermod -a -G sudo '${USERNAME}'; \
+    fi
+
+# Give the non-root user ownership of the rustup and cargo homes.
+RUN chown -R "${USERNAME}:${USERNAME}" "${RUSTUP_HOME}"
+
+# Persist pnpm store and cargo registry caches across rebuilds.
+ENV PNP_HOME=/home/vodecode/.pnpm
+ENV CARGO_HOME=/home/vodecode/.cargo
+RUN mkdir -p "${PNPM_HOME}" "${CARGO_HOME}" \
+    && chown -R "${USERNAME}:${USERNAME}" "${PNPM_HOME}" "${CARGO_HOME}"
+
+USER ${USERNAME}
+WORKDIR /workspaces
+
+# Pre-warm pnpm store directory so post-create installs are faster.
+RUN mkdir -p "${PNP_HOME}/store"
+
+CMD ["sleep","infinity"]
