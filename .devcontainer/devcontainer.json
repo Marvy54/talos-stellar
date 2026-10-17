@@ -1,0 +1,49 @@
+{
+  "name": "Stellar / Next.js / Python / Rust development",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".",
+    "args": {
+      "NODE_VERSION": "20",
+      "PNIM_VERSION": "9.12.0",
+      "PYTHON_VERSION": "3.11.8",
+      "RUST_TOOLCHAIN_VERSION": "1.83.0",
+      "STELLAR_CLI_VERSION": "22.2.0"
+    }
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/common-utility": {},
+    "ghcr.io/devcontainers/features/docker-in-docker": {}
+  },
+  "forwardPorts": [
+    3000,
+    5432,
+    8000,
+    8080,
+    8888,
+    9000
+  ],
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbwaelim.sqlite-viewer",
+        "edwald.rust-analyzer",
+        "esbeen.pnpm",
+        "ms-azuretools.vscode-docker",
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "dbwaelim.sqlite-viewer",
+        "bmessman.codespell",
+        "db.db-code"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "rust-analyzer.check.onSave": true
+      }
+    }
+  },
+  "remoteUser": "v-code",
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderName}"
+}

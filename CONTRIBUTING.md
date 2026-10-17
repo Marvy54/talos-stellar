@@ -3,7 +3,7 @@
 Thanks for helping improve Talos Protocol. This guide covers the local development setup for the Node.js, Python, and Rust parts of the monorepo, the required environment files, and the workflow we expect for pull requests.
 
 If you are looking for a good place to start, browse the open Wave issues:
-https://github.com/enliven17/talos-stellar/issues?q=is%3Aissue+is%3Aopen+label%3A%22Stellar+Wave%22
+https://github.com/enliven17/talos-stellar/issues?q=iss%3Aissue+iss%3Aopen+label%3A%22Stellar+Wave%22
 
 ## Prerequisites
 
@@ -15,12 +15,39 @@ Install these before you start working locally:
 - `uv`
 - Rust stable toolchain and `cargo`
 - Soroban CLI, installed as `stellar` via `cargo install --locked stellar-cli --features opt`
+- [`gitleaks`](https://github.com/gitleaks/gitleaks) secret scanner — `brew install gitleaks`, or download a binary from the [releases page](https://github.com/gitleaks/gitleaks/releases) (required for `pnpm run secrets:check`)
 
 For the Rust contracts, also add the Wasm target:
 
 ```bash
 rustup target add wasm32-unknown-unknown
 ```
+
+## Devcontainer (Codespaces / VS Code)
+
+The repo ships a `.devcontainer/devcontainer.json` that installs the full toolchain so you can start working in one click. It includes:
+
+- Node 20 and pnpm 9
+- Python 3.11 with `uv`
+- Rust stable with the `wasm32-unknown-unknown` target
+- `stellar-cli`` installed as `stellar`
+- `gitleaks` for `pnpm run secrets:check`
+
+The container forwards the ports used by `docker-compose.yml` and the Next.js dev server (see `.devcontainer/devcontainer.json` for the authoritative list). On creation it runs `pnpm install`, `uv sync --extra dev` in `packages/prime-agent`, and prepares the Rust target.
+
+To use it:
+
+1. Open the repo in GitHub Codespaces, or in VS Code run **Dev Containers: Reopen in Container**.
+2. Wait for the post-create command to finish installing workspace dependencies.
+3. Verify the environment:
+
+```bash
+pnpm --dir web test:unit
+cd packages/prime-agent && uv run pytest
+cd contracts && cargo test
+```
+
+The first build of the devcontainer image typically takes **10-20 minutes** on a cold Codespaces machine (it compiles `stellar-cli` from source). Subsequent starts reuse the cached image and take under a minute. If you prefer a local setup, follow the instructions below.
 
 ## Repository Layout
 
@@ -45,6 +72,16 @@ Install the workspace dependencies from the repository root:
 ```bash
 pnpm install
 ```
+Generate the dependency license report from the installed workspace graph:
+
+```bash
+pnpm licenses:report
+```
+
+The command writes `dist/licenses/dependency-licenses.json` and
+`dist/licenses/dependency-licenses.md`. It fails closed when pnpm cannot read
+the dependency graph or any dependency has missing or ambiguous license
+metadata. The generated directory is a CI artifact and should not be committed.
 
 If you only need the web app, you can still work from the root with `pnpm dev` because the root package forwards to `web/`.
 
@@ -76,7 +113,7 @@ To deploy the contracts to testnet, use the provided script from a Bash-compatib
 
 ```bash
 ./deploy.sh testnet
-```
+[```
 
 The script prints the deployed contract IDs that need to be copied into the web app environment file.
 
@@ -95,9 +132,12 @@ The repo already includes verified example files for each runtime. Copy them bef
 - `DATABASE_URL` and `DIRECT_URL`
 - `STELLAR_NETWORK`, `STELLAR_HORIZON_URL`, and `STELLAR_RPC_URL`
 - `STELLAR_OPERATOR_SECRET_KEY` and `STELLAR_OPERATOR_PUBLIC_KEY`
+​
 - `NEXT_PUBLIC_STELLAR_OPERATOR_PUBLIC_KEY`
+​
 - `NEXT_PUBLIC_TALOS_REGISTRY_CONTRACT` and `NEXT_PUBLIC_TALOS_NAME_SERVICE_CONTRACT`
-- `X402_FACILITATOR_URL`, `X402_API_KEY`, and `X402_SETTLEMENT_NETWORK`
+​
+- `X402_FACILITATOR_URL`, `X402_API_KEY` and `X402_SETTLEMENT_NETWORK​`
 - `GROQ_API_KEY` or `OPENAI_API_KEY`
 - `TAVILY_API_KEY`
 
@@ -143,11 +183,64 @@ pnpm stack:down
 pnpm stack:reset
 ```
 
+`pnpm stack:reset` destroys the stack volumes and re-imports everything. To clear local test data without recreating the stack, use the safe reset instead:
+
+```bash
+pnpm stack:reset-data --dry-run    # preview the tables and row counts
+pnpm stack:reset-data --yes        # truncate local test data
+pnpm stack:reset-data --yes --seed # truncate, then re-run db:seed
+```
+
+It only ever targets a loopback database, requires `--yes` to destroy anything,
+and never logs credentials. See
+[docs/local-test-data-reset.md](./docs/local-test-data-reset.md) for the full
+behavior contract. Regression tests for the shell layer: `bash scripts/local-stack.test.sh`.
+
 The stack defaults to the web service and a mock Stellar provider. Add the optional prime-agent service with:
 
 ```bash
 docker compose --profile agent up -d prime-agent
 ```
+
+#### Deterministic smoke fixture
+
+The local stack's expected shape — ports, health endpoints, and mock marketplace
+agents — is captured in a deterministic fixture at
+`web/tests/fixtures/smoke-fixture.json`. Regenerating it is byte-stable (no
+timestamps, randomness, or network): every run on any machine produces identical
+output, so diffs in review are meaningful.
+
+The exact local command to verify the fixture is canonical and drift-free:
+
+```bash
+pnpm smoke:fixture:check
+```
+
+To regenerate it after intentionally changing the fixture definition in
+`scripts/smoke-fixture.lib.mjs`:
+
+```bash
+pnpm smoke:fixture:gen
+```
+
+Focused tests (positive, negative, boundary, regression, and privacy coverage):
+
+```bash
+pnpm --dir web exec vitest run tests/smoke-fixture.unit.test.ts
+```
+
+Behavior notes:
+
+- **Fail closed** — ambiguous, malformed, or secret-shaped input aborts with a
+  non-zero exit and an explicit, privacy-safe error. Field names that look like
+  secrets (`secret`, `seed`, `private key`, `password`, `api key`, `proof`, …)
+  are rejected outright and their values are never logged or returned.
+- **Placeholder data only** — the fixture never contains real keys, seeds, or
+  payment proofs; agent addresses are deterministic truncated placeholders in
+  the same style as the demo seed.
+- **CI** — `pnpm smoke:fixture:check` is safe to wire into any workflow step;
+  it exits `0` when the committed fixture matches the canonical output and `1`
+  with a regeneration hint otherwise.
 
 ### Web
 
@@ -224,8 +317,8 @@ pnpm --dir web exec tsc --noEmit
 # Windows PowerShell
 pnpm --dir web exec vitest run tests\health.test.ts
 pnpm --dir web exec vitest run tests\*.unit.test.ts
-pnpm --dir web exec vitest run tests/openapi-snapshot.test.ts
-pnpm --dir web exec vitest run src/area/devx/__tests__/runner.test.ts
+pnpm --dir web exec vitest run tests\openapi-snapshot.test.ts
+pnpm --dir web exec vitest run src\area\devx\__tests__\runner.test.ts
 pnpm --dir web run lint
 pnpm --dir web exec tsc --noEmit
 ```
@@ -238,9 +331,10 @@ Choose the focused command by area:
 | `web/drizzle/**`, `web/src/db/**`, `web/drizzle.config.ts` | `pnpm --dir web run db:migrate`, then the specific DB test with `pnpm --dir web exec vitest run tests/<name>.test.ts` | `Web Migrations CI` |
 | `web/src/area/devx/**` | `pnpm --dir web exec vitest run src/area/devx/__tests__/runner.test.ts` | `Benchmark CI - regression gates` |
 | API route or library unit tests | `pnpm --dir web exec vitest run tests/<name>.test.ts` | `Deploy Web -> Vercel` |
-| Backup or restore paths | `pnpm --dir web exec vitest run tests/backup-crypto.test.ts tests/backup-types.test.ts` | `Web Backups CI` |
+| Local test-data reset (`web/src/lib/local-test-data-reset.ts`, `web/src/db/reset-test-data.ts`, `scripts/local-stack.sh`) | `pnpm --dir web exec vitest run tests/local-test-data-reset.unit.test.ts; bash scripts/local-stack.test.sh` | `Deploy Web -> Vercel` |
+| Backup or restore paths | `pnpm --dir web exec vitest run tests/backup-restore-fixture.test.ts tests/backup-crypto.test.ts tests/backup-types.test.ts` | `Web Backups CI` |
 
-Use `pnpm --dir web run test:e2e` only when API route behavior depends on the running app or cross-route state. Use the local stack with `pnpm stack:up` when you need Postgres plus the mock Stellar provider, and clean it up with `pnpm stack:down`. Do not use `pnpm stack:reset` unless you intentionally want to destroy and recreate local stack data.
+Use `pnpm --dir web run test:e2` only when API route behavior depends on the running app or cross-route state. Use the local stack with `pnpm stack:up` when you need Postgres plus the mock Stellar provider, and clean it up with `pnpm stack:down`. Do not use `pnpm stack:reset` unless you intentionally want to destroy and recreate local stack data; `pnpm stack:reset-data` clears test rows without touching the stack volumes.
 
 ### SDK changes
 
@@ -264,348 +358,5 @@ Choose the focused command by area:
 
 | Changed files | Focused command | CI workflow |
 | --- | --- | --- |
-| `packages/sdk/src/**`, `packages/sdk/tests/**` | `pnpm --filter @talos-protocol/sdk exec vitest run tests/<name>.test.ts` | `SDK Compatibility Tests` |
-| `packages/sdk/src/generated-types.ts`, `web/tests/fixtures/openapi.snapshot.json` | `pnpm --filter @talos-protocol/sdk run build`, then verify `git diff` | `SDK Types CI` |
-| SDK build, packaging, or browser bundle files | `pnpm --filter @talos-protocol/sdk run build` | `SDK Compatibility Tests` |
-
-If `SDK Compatibility Tests` reports a missing `compat:*` script, check `.github/workflows/sdk-compatibility.yml` and `packages/sdk/package.json` together. The workflow invokes smoke-test script names, while the package manifest is the source of available local scripts.
-
-### Prime Agent changes
-
-The Python agent uses `uv` from `packages/prime-agent/`. The expected artifacts are pytest and ruff output in the CI log.
-
-```bash
-# POSIX shells
-cd packages/prime-agent
-uv run pytest tests/test_scheduler.py -v
-uv run pytest tests/ -v
-uv run ruff check src tests
-```
-
-```powershell
-# Windows PowerShell
-Set-Location packages\prime-agent
-uv run pytest tests\test_scheduler.py -v
-uv run pytest tests\ -v
-uv run ruff check src tests
-Set-Location ..\..
-```
-
-Choose the focused command by area:
-
-| Changed files | Focused command | CI workflow |
-| --- | --- | --- |
-| `packages/prime-agent/src/talos_agent/scheduler.py` | `uv run pytest tests/test_scheduler.py -v` | `Prime Agent CI` |
-| `packages/prime-agent/src/talos_agent/backup_service.py`, `packages/prime-agent/tests/test_backup_service.py` | `uv run pytest tests/test_backup_service.py -v` | `Web Backups CI`, `Prime Agent CI` |
-| Any other agent module | `uv run pytest tests/test_<area>.py -v`, plus `uv run ruff check src tests` | `Prime Agent CI` |
-
-Some integration tests need external credentials or services such as Stellar, browser adapters, social adapters, or AI providers. If a failure is caused by a missing environment variable or refused network connection, document it as environment-dependent in your PR instead of replacing it with a broad unrelated suite.
-
-### Contract changes
-
-The Soroban contracts live in `contracts/`. The expected build artifacts are Wasm files under `contracts/target/wasm32-unknown-unknown/release/`.
-
-```bash
-# POSIX shells
-cd contracts
-cargo test -p talos-registry
-cargo test
-cargo build --target wasm32-unknown-unknown --release
-pnpm --dir contracts exec tsc --noEmit
-pnpm --dir contracts exec vitest run fixtures
-```
-
-```powershell
-# Windows PowerShell
-Set-Location contracts
-cargo test -p talos-registry
-cargo test
-cargo build --target wasm32-unknown-unknown --release
-pnpm --dir contracts exec tsc --noEmit
-pnpm --dir contracts exec vitest run fixtures
-Set-Location ..
-```
-
-Choose the focused command by area:
-
-| Changed files | Focused command | CI workflow |
-| --- | --- | --- |
-| `contracts/talos_registry/**` | `cargo test -p talos-registry` | `Contracts CI` |
-| `contracts/talos_name_service/**` | `cargo test -p talos-name-service` | `Contracts CI` |
-| `contracts/talos_governance/**` | `cargo test -p talos-governance` | `Contracts CI` |
-| `contracts/ttl_manager/**` | `cargo test -p ttl-manager` | `Contracts CI` |
-| `contracts/storage_migration/**` | `cargo test -p storage-migration` | `Contracts CI` |
-| `contracts/fixtures/**` | `pnpm --dir contracts exec tsc --noEmit; pnpm --dir contracts exec vitest run fixtures` | `Contracts CI` |
-| Contract release output or Wasm compatibility | `cargo build --target wasm32-unknown-unknown --release` | `Contracts CI` |
-
-Deploy commands such as `pnpm --dir contracts run deploy:testnet` and `./deploy.sh testnet` require configured Stellar credentials and network access. Treat failures from missing signers, RPC timeouts, Horizon rate limits, or Soroban testnet availability as deployment-environment issues unless local `cargo test` or Wasm build also fails.
-
-### Common failure messages
-
-| Message | Usually means | Next step |
-| --- | --- | --- |
-| `ERR_PNPM_OUTDATED_LOCKFILE` or frozen lockfile failures | `package.json` and lockfile are out of sync | Re-run the same install command locally and commit lockfile changes only when dependency changes are intentional. |
-| `No test files found` | The path or glob does not match from the package working directory | Re-run from the package root or use `pnpm --dir <package> exec vitest run <path>`. |
-| `DATABASE_URL` or `DIRECT_URL` is missing | The command needs a Postgres-backed environment | Copy `web/.env.example` to `web/.env.local` or use `pnpm stack:up` for local integration work. |
-| `ECONNREFUSED`, `ENOTFOUND`, Horizon/RPC timeout, or preview URL missing | External service, local server, mock provider, or Vercel preview is unavailable | Check the named workflow logs first. If local unit tests pass and only the external service failed, note it as environment-dependent. |
-| `schema.ts is out of sync with committed migration files` | Drizzle schema and migrations diverged | Run `pnpm --dir web run db:generate`, inspect the generated SQL, and commit it only when the schema change is intended. |
-| `Generated types differ from committed version` | OpenAPI snapshot and SDK generated types drifted | Run the repository's generated-type workflow and review `packages/sdk/src/generated-types.ts`. |
-| `Browser bundle not built` or missing `packages/sdk/dist/browser/sdk.bundle.js` | SDK build did not produce the expected browser artifact | Run `pnpm --filter @talos-protocol/sdk run build:browser` or the full SDK build. |
-| `ruff` violations | Python formatting or lint rule failures | Run `uv run ruff check src tests` in `packages/prime-agent/` and fix the reported files. |
-| `wasm32-unknown-unknown` target not installed | Rust cannot build Soroban Wasm artifacts | Run `rustup target add wasm32-unknown-unknown`. |
-| PR preview comment is present but Vercel URL is absent | The repo preview workflow provisions the mock DB; Vercel attaches previews separately | Check Vercel's GitHub integration/status before treating it as an application failure. |
-
-## Code Style
-
-- Keep changes small and focused
-- Match the existing patterns in the area you are editing
-- Prefer descriptive names over clever abstractions
-- Add or update tests when behavior changes
-- Do not commit secrets, keys, or generated `.env` files
-- For TypeScript and React, run `pnpm lint` and the relevant `pnpm test:*` command before opening a PR
-- For Python, prefer explicit types and validate changes with `uv run pytest`
-- For provider job-effect changes, also run
-  `uv run pytest tests/test_durable_job_effects.py` and follow the
-  [durable job effects runbook](./docs/prime-agent-durable-job-effects.md).
-- For Rust, keep formatting standard with `cargo fmt` and validate with `cargo test`
-
-## Database Transaction Retry & Serialization Hardening
-
-Critical database state transitions (money, token purchases, patron creation, job state transitions, agent genesis) use `withTransactionRetry` from `web/src/db/db-retry.ts` to automatically recover from PostgreSQL serialization conflicts (`40001`), deadlocks (`40P01`), lock timeouts (`55P03`), and transient connection failures.
-
-### Environment Configuration
-
-- `DB_TRANSACTION_RETRY_ENABLED`: Controls transaction retry behavior (default: `true`). Set to `false` to disable retries instantly.
-- `DB_TRANSACTION_RETRY_MAX_RETRIES`: Maximum number of retry attempts (default: `5`).
-- `DB_TRANSACTION_RETRY_INITIAL_DELAY_MS`: Initial exponential backoff delay in milliseconds (default: `50`).
-- `DB_TRANSACTION_RETRY_MAX_DELAY_MS`: Maximum exponential backoff cap in milliseconds (default: `1000`).
-
-### Operational Signals & Observability
-
-Retries emit structured Pino log events with domain categories (`MONEY`, `TOKEN`, `PATRON`, `JOB`, `GENESIS`):
-
-- `db_transaction_retry_attempt` (`logger.warn`): Logged when a retryable serialization/connection error triggers a retry attempt.
-- `db_transaction_retry_success` (`logger.info`): Logged when a transaction succeeds after prior failed attempts.
-- `db_transaction_retry_exhausted` (`logger.error`): Logged when maximum retry attempts are exceeded.
-
-Sensitive data (keys, passphrases, raw payloads) are excluded from log context.
-
-### Local Verification
-
-To run unit and concurrency contention tests:
-
-```bash
-pnpm --filter web exec vitest run tests/db-retry.unit.test.ts tests/db-retry.contention.test.ts
-```
-
-### Rollback Guidance
-
-If operational issues or database performance degradation occur:
-
-1. Set `DB_TRANSACTION_RETRY_ENABLED=false` in `web/.env.local` or application environment variables.
-2. Restart the web server. This immediately falls back to single-attempt database transactions without requiring application redeployments or code rollbacks.
-
-## SDK Event Stream (`TalosEventStream`)
-
-The `packages/sdk` package exports a browser and Node-compatible SSE client for the Talos platform event stream.
-
-### Quick start
-
-```ts
-import { TalosEventStream, InMemorySeenStore } from "@talos-protocol/sdk";
-
-const stream = new TalosEventStream("https://talos-stellar.vercel.app", {
-  authHeader: "Bearer <api-key>",
-  seenStore: new InMemorySeenStore(), // optional, suppresses duplicates on reconnect
-});
-
-stream.on("event", (evt) => console.log(evt.type, evt.data));
-stream.on("error", (err, attempt) => console.error("attempt", attempt, err));
-stream.on("close", () => console.log("stream closed"));
-
-stream.connect();
-
-// To stop:
-stream.close();
-```
-
-### Configuration reference
-
-| Option                 | Default       | Notes                                                     |
-| ---------------------- | ------------- | --------------------------------------------------------- |
-| `path`                 | `/api/events` | Stream endpoint path                                      |
-| `authHeader`           | —             | Sent as `Authorization` header. Never logged.             |
-| `maxReconnectAttempts` | `10`          | Total attempts before permanent close                     |
-| `baseReconnectDelayMs` | `1000`        | Base delay; doubles per attempt                           |
-| `maxReconnectDelayMs`  | `30000`       | Backoff ceiling                                           |
-| `jitter`               | `true`        | Full-jitter on reconnect delay                            |
-| `maxHeartbeatMisses`   | `3`           | Consecutive missed heartbeat ticks before stall reconnect |
-| `heartbeatIntervalMs`  | `30000`       | Heartbeat watchdog interval                               |
-| `seenStore`            | —             | `SeenStore` implementation for duplicate suppression      |
-| `signal`               | —             | External `AbortSignal` to close the stream                |
-
-### Operational signals
-
-The optional `logger` receives structured, privacy-safe events (no payloads, no credentials):
-
-| Event                      | Level | Meaning                                         |
-| -------------------------- | ----- | ----------------------------------------------- |
-| `sse:connecting`           | info  | Initial connect or reconnect                    |
-| `sse:reconnect_scheduled`  | info  | Reconnect delay queued with `delayMs`           |
-| `sse:duplicate_suppressed` | info  | An event ID was already in `seenStore`          |
-| `sse:error`                | warn  | Connection error, `attempt` included            |
-| `sse:heartbeat_miss`       | warn  | No server activity during watchdog interval     |
-| `sse:stall_detected`       | warn  | `maxHeartbeatMisses` reached; forcing reconnect |
-| `sse:budget_exhausted`     | warn  | All reconnect attempts used                     |
-| `sse:handler_error`        | error | An `on("event")` handler threw                  |
-
-Pass any `{ info, warn, error }` compatible logger (e.g. `pino`, `console`):
-
-```ts
-import pino from "pino";
-const stream = new TalosEventStream(url, { logger: pino(), authHeader });
-```
-
-### Duplicate suppression
-
-`InMemorySeenStore` (capacity 10 000, LRU eviction) covers process-lifetime dedup.
-For cross-restart guarantees supply a persistent implementation:
-
-```ts
-class RedisSeenStore implements SeenStore {
-  async has(id: string) {
-    return Boolean(await redis.exists(`seen:${id}`));
-  }
-  async add(id: string) {
-    await redis.set(`seen:${id}`, 1, "EX", 86400);
-  }
-}
-```
-
-### Rollback
-
-`TalosEventStream` is additive — no existing API surface changed. To disable the feature: simply don't call `connect()`, or `close()` the stream immediately.
-
-### Compatibility notes
-
-- Requires `fetch` and `ReadableStream` (native in browsers and Node ≥ 18).
-- In Node 18 you may need `--experimental-fetch` if not enabled by default; Node 20+ needs nothing.
-- The `fetch` option in `TalosEventStreamOptions` lets you inject a polyfill or mock for older runtimes and tests.
-
-### Local verification
-
-```bash
-cd packages/sdk
-npm test        # runs vitest — all 93 tests should pass
-npm run build   # tsc compile check
-```
-
-## PR Preview Environments
-
-Talos Protocol supports reproducible, ephemeral per-PR web and database preview environments with automatic lifecycle management. This ensures contributors can verify full-stack changes safely before merging.
-
-### Setup and Provisioning
-
-When you open or synchronize a PR, the `PR Preview Provision` GitHub Action automatically provisions an ephemeral database branch (e.g., using Neon or a mock provider during development). It will:
-1. Provision the database and configure environment naming (e.g., `pr-123`).
-2. Run database migrations (`pnpm db:migrate`).
-3. Seed the database with demo data (`pnpm db:seed-demo`).
-4. Generate an isolated Vercel Preview URL linked to this ephemeral database.
-
-A bot will comment on your PR with the connection details and the preview link once it is ready.
-
-### Verification
-
-To verify the preview environments locally or manually test the lifecycle:
-```bash
-# Provision a mock environment for a specific PR
-pnpm --dir web env:provision 123 my-feature-branch
-
-# Teardown the mock environment
-pnpm --dir web env:teardown 123
-```
-Unit tests for the environment lifecycle logic reside in `web/src/area/devx/__tests__/environments.test.ts` (or similar tests). Make sure tests pass locally by running the relevant Vitest file directly, for example `pnpm --dir web exec vitest run src/area/devx/__tests__/environments.test.ts`.
-
-### Rollback and Teardown
-
-Preview environments are destroyed automatically when the PR is closed or merged via the `PR Preview Teardown` GitHub workflow.
-Cost limits and TTLs (Time-To-Live) are enforced programmatically. If an environment becomes unstable, you can manually trigger a rebuild by closing and reopening the PR, or trigger the teardown script via CLI.
-
-### Troubleshooting
-
-- **Database provisioning fails**: Check the GitHub Actions logs for `PR Preview Provision`. Ensure your branch passes linting and type checks, as migration errors often cause provisioning failures.
-- **Preview URL is missing**: Vercel manages the web preview natively. Ensure the Vercel GitHub integration is active for the repository.
-- **Stale data**: The environment is seeded once upon provisioning. If you change the seed script, you may need to close and reopen the PR to provision a fresh database.
-
-## CI Path Filtering (Changed-Path Package Matrix)
-
-The unified CI workflow (`.github/workflows/ci.yml`) runs only the checks relevant to the packages affected by a PR. A detection script (`scripts/ci-detect-changes.sh`) diffs changed files against the PR base and builds a JSON matrix of affected packages.
-
-### Path → package mapping
-
-| Changed path pattern | Packages checked |
-|---|---|
-| `web/**` | web (typecheck, lint, unit tests) |
-| `packages/sdk/**` | sdk (build/typecheck, tests) |
-| `packages/prime-agent/**` | prime-agent (ruff, pytest) |
-| `contracts/**` | contracts (cargo test, WASM build) |
-| `pnpm-lock.yaml`, `pnpm-workspace.yaml`, root `package.json`, `scripts/**`, `.github/**` | **ALL** packages |
-| Unknown / unclassified files | **ALL** packages (fail-closed) |
-
-### Local validation
-
-To test the detection script locally before pushing:
-
-```bash
-# Dry-run against a specific commit range
-BASE_SHA=<base> HEAD_SHA=<head> bash scripts/ci-detect-changes.sh
-
-# Run the full test suite
-bash scripts/ci-detect-changes.test.sh
-```
-
-### Design principles
-
-- **Fail-closed**: if the detector cannot confidently determine the scope (invalid SHA, unrecognized path), ALL packages are checked.
-- **No code execution from PRs**: the detector only inspects file paths via `git diff --name-only`.
-- **No secrets required**: works for fork PRs using only the GitHub-provided base/head SHAs.
-
-### Existing per-package workflows
-
-The following specialized workflows continue to run independently with their own path filters:
-
-- `ci-prime-agent.yml` — prime-agent lint + tests
-- `contracts-ci.yml` — contract tests + WASM build
-- `sdk-compatibility.yml` — SDK build + tests across Node versions
-- `sdk-types-ci.yml` — SDK generated-type drift detection
-- `web-migrations-ci.yml` — web database migration validation
-- `web-openapi-ci.yml` — web OpenAPI snapshot check
-- `benchmark-ci.yml` — performance regression gates
-
-The unified `ci.yml` workflow is an **additional** PR gate, not a replacement.
-
-## Pull Request Workflow
-
-1. Create a branch from the latest `main`
-2. Make your changes
-3. Update documentation when setup steps or environment variables change
-4. Run the relevant tests for the area you touched
-5. Open a pull request using the template in [`.github/PULL_REQUEST_TEMPLATE.md`](./.github/PULL_REQUEST_TEMPLATE.md)
-6. Link the issue in your PR description, for example `Closes #39`
-
-## Releases
-
-Versioning, changelogs, and tagging for `web`, `sdk`, `agent`, and `contracts` are automated —
-see [`RELEASES.md`](./RELEASES.md). You don't need to do anything for this beyond writing
-[Conventional Commits](https://www.conventionalcommits.org/) subjects (`feat: ...`, `fix: ...`,
-etc.) in your PRs; version bumps are computed from those.
-
-## Issue and PR Templates
-
-Use the templates already included in the repo when filing new work:
-
-- Bug reports: [`.github/ISSUE_TEMPLATE/bug_report.md`](./.github/ISSUE_TEMPLATE/bug_report.md)
-- Feature requests: [`.github/ISSUE_TEMPLATE/feature_request.md`](./.github/ISSUE_TEMPLATE/feature_request.md)
-- Pull requests: [`.github/PULL_REQUEST_TEMPLATE.md`](./.github/PULL_REQUEST_TEMPLATE.md)
-
-These templates are meant to capture the runtime, environment, and test details we need to review changes quickly.
+| `packages/sdk/src/**`, `packages/sdk/tests/**` | `pnpm --filter @talos-protocol/sdk exec vitest run tests/<name>.test.ts` | `SKD Compatibility Tests` |
+| `packages/sdk/package.json`, `packages/sdk/tsup.config.ts` | `pnpm --filter @talos-protocol/sdk run build` | `SGD Compatibility Tests` |
