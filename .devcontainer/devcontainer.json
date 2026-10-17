@@ -1,63 +1,83 @@
 {
-  "name": "Repo Dev Container",
+  "name": "Stellar SDK + Prime Agent + Contracts",
   "build": {
     "dockerfile": "Dockerfile",
     "context": ".",
     "args": {
       "NODE_VERSION": "20",
-      "PYBUFO_VERSION": "3.11",
-      "RUST_TOOLCHAIN_VERSION": "1.80.1",
-      "STELLAR_CLI_VERSION": "21.1.0"
+      "PYTHON_VERSION": "3.11"
     }
   },
+  "workspaceFolder": "/workspaces/stellar-sdk",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/stellar-sdk,type=bind",
+  "remoteUser": "vscode",
+  "forwardPorts": [
+    3000,
+    5432,
+    8000,
+    8080,
+    8888,
+    9000,
+    9090
+  ],
+  "portAttributes": {
+    "3000": {
+      "label": "web dev server",
+      "onAutoForward": { "ignoreClients": true }
+    },
+    "5432": { "label": "Postgres" },
+    "8000": { "label": "Sorban/Stellar core HTTP" },
+    "8080": { "label": "Sorban/Stellar core HTTP (alt)" },
+    "8888": {
+      "label": "web dev server (alt)",
+      "onAutoForward": { "ignoreClients": true }
+    },
+    "9000": { "label": "Prime agent dev server" },
+    "9090:": { "label": "Prime agent dev server (alt)" }
+  },
   "features": {
-    "github.com/devcontainers/features/common-utility:1" {}
+    "ghcr.com/devcontainers/features/common-utils:1": {},
+    "ghcr.com/devcontainers/features/docker-in-docker:1": {},
+    "ghcr.com/devcontainers/features/github-cli:1": {}
   },
   "customizations": {
     "vscode": {
       "extensions": [
-        "db-aevenue.vscode-sqlite-viewer",
-        "esbendp.prettier-vscode",
-        "foxundress.vscode-stylelint",
-        "msheng.devcontainers",
+        "dbwjdbj.dbaever",
+        "esbeen.pyvise",
+        "mshenton.python",
         "rust-lang.rust-analyzer",
-        "stellar-dev.stellar-cli-vscode",
-        "typescript-team.tss-eslint",
-        "vue.volar",
-        "bmathes.create-migration-file",
-        "charliermarsh.python-env",
-        "ms-python.python",
-        "ms-python.vscode-python",
-        "db1e740c-1c4c-49c4-9d99-1c4c49c49c49"
+        "taikung.vscode-soroban",
+        "birang.vscode-solidity",
+        "esben.python-env",
+        "dbwjdbj.dbaever",
+        "unified.stellar-smart-contracts"
       ],
       "settings": {
-        "python.defaultInterpreterPath": "/usr/bin/python3.11",
+        "python.defaultInterpreterPath": "/home/vscode/.venv/bin/python",
+        "python.testing.unitTestEnabled": true,
         "python.testing.pytestEnabled": true,
-        "rust-analyzer.check.command": "clippy",
-        "terminal.integrated.defaultProfile.linux": "bash",
-        "editor.formatOnSave": true
+        "typescript.tsdk": "/workspaces/stellar-sdk/node_modules/typescript/lib",
+        "editor.formatOnSave": true,
+        "rust-analyzer.checkOnSave": "clippy",
+        "terminal.integrated.defaultProfile.linux": "bash"
       }
     }
   },
-  "features": {},
-  "forwardPorts": [
-    3000,
-    3001,
-    5432,
-    8000,
-    8001,
-    8080,
-    8888
-  ],
   "postCreateCommand": "bash .devcontainer/post-create.sh",
-  "remoteUser": "devcontainer",
-  "workspaceFolder": "/workspaces/repo",
-  "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/repo,type=bind",
-  "runArgs": ["--init"],
-  "hostRequirements": {
-    "dcker": {
-      "version": "20.10.0",
-      "args": ["--add-host=host.docker.internal:host-gateway"]
-    }
-  }
+  "postStartCommand": "sudo chown -R ${USER} ${CARGO_HOME} /home/${USER}/.local/share/pnpm 2>/dev/null || true",
+  "remoteEnv": {
+    "POSTGRES_HOST": "db",
+    "POSTGRES_PORT": "5432",
+    "REDIS_URL": "redis://redis:6379/0",
+    "STELLAR_NETWORK": "testnet",
+    "REFER_DEV": "1"
+  },
+  "mounts": [
+    "source=stellar-sdk-pnpm-store,target=/home/vscode/.local/share/pnpm,type=volume",
+    "source=stellar-sdk-cargo-registry,target=/home/vscode/.cargo/registry,type=volume",
+    "source=stellar-sdk-cargo-git,target=/home/vscode/.cargo/git,type=volume",
+    "source=stellar-sdk-target,target=/workspaces/stellar-sdk/contracts/target,type=volume"
+  ],
+  "waitForOnFolderOpen": true
 }
