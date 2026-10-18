@@ -1,1 +1,814 @@
-IyBDb250cmlidXRpbmcgdG8gVGFsb3MgUHJvdG9jb2wKClRoYW5rcyBmb3IgaGVscGluZyBpbXByb3ZlIFRhbG9zIFByb3RvY29sLiBUaGlzIGd1aWRlIGNvdmVycyB0aGUgbG9jYWwgZGV2ZWxvcG1lbnQgc2V0dXAgZm9yIHRoZSBOb2RlLmpzLCBQeXRob24sIGFuZCBSdXN0IHBhcnRzIG9mIHRoZSBtb25vcmVwbywgdGhlIHJlcXVpcmVkIGVudmlyb25tZW50IGZpbGVzLCBhbmQgdGhlIHdvcmtmbG93IHdlIGV4cGVjdCBmb3IgcHVsbCByZXF1ZXN0cy4KCklmIHlvdSBhcmUgbG9va2luZyBmb3IgYSBnb29kIHBsYWNlIHRvIHN0YXJ0LCBicm93c2UgdGhlIG9wZW4gV2F2ZSBpc3N1ZXM6Cmh0dHBzOi8vZ2l0aHViLmNvbS9lbmxpdmVuMTcvdGFsb3Mtc3RlbGxhci9pc3N1ZXM/cT1pc3MlM0Fpc3N1ZStpc3MlM0FvcGVuK2xhYmVsJTNBJTIyU3RlbGxhcitXYXZlJTIyCgojIyBQcmVyZXF1aXNpdGVzCgpJbnN0YWxsIHRoZXNlIGJlZm9yZSB5b3Ugc3RhcnQgd29ya2luZyBsb2NhbGx5OgoKLSBOb2RlLmpzIDIwIG9yIG5ld2VyCi0gcG5wbSA5IG9yIG5ld2VyCi0gUHl0aG9uIDMuMTEgb3IgbmV3ZXIKLSBgdXZgCi0gUnVzdCBzdGFibGUgdG9vbGNoYWluIGFuZCBgY2FyZ29gCi0gU29yb2JhbiBDTEksIGluc3RhbGxlZCBhcyBgc3RlbGxhcmAgdmlhIGBjYXJnbyBpbnN0YWxsIC0tbG9ja2VkIHN0ZWxsYXItY2xpIC0tZmVhdHVyZXMgb3B0YAotIFtgZ2l0bGVha3NdKGh0dHBzOi8vZ2l0aHViLmNvbS9naXRsZWFrcy9naXRsZWFrcykgc2VjcmV0IHNjYW5uZXIg4oCUIGBicmV3IGluc3RhbGwgZ2l0bGVha3NgLCBvciBkb3dubG9hZCBhIGJpbmFyeSBmcm9tIHRoZSBbcmVsZWFzZXMgcGFnZV0oaHR0cHM6Ly9naXRodWIuY29tL2dpdGxlYWtzL2dpdGxlYWtzL3JlbGVhc2VzKSAocmVxdWlyZWQgZm9yIGBwbnBtIHJ1biBzZWNyZXRzOmNoZWNrYCkKCkZvciB0aGUgUnVzdCBjb250cmFjdHMsIGFsc28gYWRkIHRoZSBXYXNtIHRhcmdldDoKCmBgYGJhc2gKcnVzdHVwIHRhcmdldCBhZGQgd2FzbTMyLXVua25vd24tdW5rbm93bgpgYGAKCiMjIERldmNvbnRhaW5lciAoQ29kZXNwYWNlcyAvIFZTIENvZGUpCgpUaGUgcmVwbyBzaGlwcyBhIGRldmNvbnRhaW5lciBkZWZpbml0aW9uIGF0IGAuZGV2Y29udGFpbmVyL2RldmNvbnRhaW5lci5qc29uYCB0aGF0IGluc3RhbGxzIE5vZGUgMjAsIHBucG0sIFB5dGhvbiAzLjExLCBSdXN0IHN0YWJsZSB3aXRoIHRoZSBgd2FzbTMyLXVua25vd24tdW5rbm93bmAgdGFyZ2V0LCBhbmQgYHN0ZWxsYXItY2xpYC4gSXQgZm9yd2FyZHMgdGhlIHBvcnRzIHVzZWQgYnkgYGRvY2tlci1jb21wb3NlLnltbGAgYW5kIHRoZSB3ZWIgZGV2IHNlcnZlciwgYW5kIGl0cyBwb3N0LWNyZWF0ZSBjb21tYW5kIGluc3RhbGxzIHRoZSB3b3Jrc3BhY2UgZGVwZW5kZW5jaWVzLgoKLSBHaXRIdWIgQ29kZXNwYWNlczogb3BlbiB0aGUgcmVwbyBhbmQgc2VsZWN0ICoqQ29kZXNwYWNlcyA+IE5ldyB3aXRoIGRldmNvbnRhaW5lciguLi4pKiouCi0gVlMgQ29kZSBsb2NhbGx5OiBpbnN0YWxsIHRoZSAqKkRldiBDb250YWluZXJzKiogZXh0ZW5zaW9uLCB0aGVuIHJ1biAqKkRldiBDb250YWluZXJzOiBSZW9wZW4gaW4gQ29udGFpbmVyKiouCgpUaGUgZmlyc3QgYnVpbGQgZG93bmxvYWRzIHRoZSBiYXNlIGltYWdlIGFuZCBjb21waWxlcyBgc3RlbGxhci1jbGkuIE9uIGEgY29sZCBjYWNoZSB0aGlzIHR5cGljYWxseSB0YWtlcyAqKjggdG8gMTUgbWludXRlcyoqOyBzdWJzZXF1ZW50IHJlYnVpbGRzIHJldXNlIHRoZSBsYXllciBjYWNoZSBhbmQgZmluaXNoIGluIGEgbWludXRlIG9yIHR3by4gVGhlIHBvc3QtY3JlYXRlIGNvbW1hbmQgcnVucyBgcG5wbSBpbnN0YWxsYCBhbmQgYHV2IHN5bmMgLS1leHRyYSBkZXZgIGFuZCBhZGRzIGFub3RoZXIgMSB0byAzIG1pbnV0ZXMgb24gZmlyc3QgcnVuLgoKT25jZSB0aGUgY29udGFpbmVyIGlzIHJlYWR5LCB0aGUgdGhyZWUgYWNjZXB0YW5jZSBjb21tYW5kcyBydW4gYXM6CgpgYGBiYXNoCnBucG0gLS1kaXIgd2ViIHRlc3Q6dW5pdApjZCBwYWNrYWdlcy9wcmltZS1hZ2VudCAmJiB1diBydW4gcHl0ZXN0CmNkIGNvbnRyYWN0cyAmJiBjYXJnbyB0ZXN0CmBgYAoKIyMgUmVwb3NpdG9yeSBMYXlvdXQKCi0gYHdlYi9gIC0gTmV4dC5qcyBhcHBsaWNhdGlvbiwgQVBJIHJvdXRlcywgYW5kIGZyb250ZW5kCi0gYHBhY2thZ2VzL3ByaW1lLWFnZW50L2AgLSBQeXRob24gYWdlbnQgcnVudGltZQotIGBjb250cmFjdHMvYCAtIFNvcm9iYW4gc21hcnQgY29udHJhY3RzIGFuZCBkZXBsb3kgc2NyaXB0cyAoc2VlIGBjb250cmFjdHMvRVZFTlRTLm1kYCBmb3IgdGhlIGV2ZW50IHNjaGVtYSkKLSBgcGFja2FnZXMvb3BlbmNsYXcvYCAtIHNraWxsIGRlZmluaXRpb25zIGFuZCBhZ2VudCBoZWxwZXIgY29kZQoKIyMgU2V0dXAKCiMjIyAxLiBDbG9uZSB0aGUgcmVwbwoKYGBgYmFzaApnaXQgY2xvbmUgaHR0cHM6Ly9naXRodWIuY29tL2VubGl2ZW4xNy90YWxvcy1zdGVsbGFyLmdpdApjZCB0YWxvcy1zdGVsbGFyCmBgYAoKIyMjIDIuIEluc3RhbGwgTm9kZS5qcyBkZXBlbmRlbmNpZXMKCkluc3RhbGwgdGhlIHdvcmtzcGFjZSBkZXBlbmRlbmNpZXMgZnJvbSB0aGUgcmVwb3NpdG9yeSByb290OgoKYGBgYmFzaApwbnBtIGluc3RhbGwKYGBgCkdlbmVyYXRlIHRoZSBkZXBlbmRlbmN5IGxpY2Vuc2UgcmVwb3J0IGZyb20gdGhlIGluc3RhbGxlZCB3b3Jrc3BhY2UgZ3JhcGg6CgpgYGBiYXNoCnBucG0gbGljZW5zZXM6cmVwb3J0CmBgYAoKVGhlIGNvbW1hbmQgd3JpdGVzIGBkaXN0L2xpY2Vuc2VzL2RlcGVuZGVuY3ktbGljZW5zZXMuanNvbmAgYW5kCmBkaXN0L2xpY2Vuc2VzL2RlcGVuZGVuY3ktbGljZW5zZXMubWRgLiBJdCBmYWlscyBjbG9zZWQgd2hlbiBwbnBtIGNhbm5vdCByZWFkCnRoZSBkZXBlbmRlbmN5IGdyYXBoIG9yIGFueSBkZXBlbmRlbmN5IGhhcyBtaXNzaW5nIG9yIGFtYmlndW91cyBsaWNlbnNlCm1ldGFkYXRhLiBUaGUgZ2VuZXJhdGVkIGRpcmVjdG9yeSBpcyBhIENJIGFydGlmYWN0IGFuZCBzaG91bGQgbm90IGJlIGNvbW1pdHRlZC4KCklmIHlvdSBvbmx5IG5lZWQgdGhlIHdlYiBhcHAsIHlvdSBjYW4gc3RpbGwgd29yayBmcm9tIHRoZSByb290IHdpdGggYHBucG0gZGV2YCBiZWNhdXNlIHRoZSByb290IHBhY2thZ2UgZm9yd2FyZHMgdG8gYHdlYi9gLgoKIyMjIDMuIFNldCB1cCBQeXRob24gd2l0aCBgdXZgCgpJbnN0YWxsIHRoZSBhZ2VudCBkZXBlbmRlbmNpZXMgYW5kIHRoZSBkZXYgZXh0cmFzOgoKYGBgYmFzaApjZCBwYWNrYWdlcy9wcmltZS1hZ2VudAp1diBzeW5jIC0tZXh0cmEgZGV2CmBgYAoKUnVuIHRoZSBhZ2VudCB3aXRoOgoKYGBgYmFzaAp1diBydW4gdGFsb3MtYWdlbnQgc3RhcnQKYGBgCgojIyMgNC4gU2V0IHVwIFJ1c3QgYW5kIFNvcm9iYW4KCkZyb20gYGNvbnRyYWN0cy9gOgoKYGBgYmFzaApjYXJnbyB0ZXN0CmNhcmdvIGJ1aWxkIC0tdGFyZ2V0IHdhc20zMi11bmtub3duLXVua25vd24gLS1yZWxlYXNlCmBgYAoKVG8gZGVwbG95IHRoZSBjb250cmFjdHMgdG8gdGVzdG5ldCwgdXNlIHRoZSBwcm92aWRlZCBzY3JpcHQgZnJvbSBhIEJhc2gtY29tcGF0aWJsZSBzaGVsbDoKCmBgYGJhc2gKLi9kZXBsb3kuc2ggdGVzdG5ldApgYGAKClRoZSBzY3JpcHQgcHJpbnRzIHRoZSBkZXBsb3llZCBjb250cmFjdCBJRHMgdGhhdCBuZWVkIHRvIGJlIGNvcGllZCBpbnRvIHRoZSB3ZWIgYXBwIGVudmlyb25tZW50IGZpbGUuCgojIyBFbnZpcm9ubWVudCBGaWxlcwoKVGhlIHJlcG8gYWxyZWFkeSBpbmNsdWRlcyB2ZXJpZmllZCBleGFtcGxlIGZpbGVzIGZvciBlYWNoIHJ1bnRpbWUuIENvcHkgdGhlbSBiZWZvcmUgcnVubmluZyBsb2NhbGx5OgoKLSBgd2ViLy5lbnYuZXhhbXBsZWAgLT4gYHdlYi8uZW52LmxvY2FsYAotIGBwYWNrYWdlcy9wcmltZS1hZ2VudC8uZW52LmV4YW1wbGVgIC0+IGBwYWNrYWdlcy9wcmltZS1hZ2VudC8uZW52YAotIGBjb250cmFjdHMvLmVudi5leGFtcGxlYCAtPiBgY29udHJhY3RzLy5lbnZgCgojIyMgV2ViIGFwcCBlbnYKCmB3ZWIvLmVudi5leGFtcGxlYCBjb250YWlucyB0aGUgd2ViIGFwcCwgZGF0YWJhc2UsIFN0ZWxsYXIsIHg0MDIsIGFuZCBBSSBzZXJ2aWNlIHZhcmlhYmxlcy4gVGhlIG1vc3QgaW1wb3J0YW50IGVudHJpZXMgYXJlOgoKLSBgREFUQUJBU0VfVVJMYCBhbmQgYERJUkVDVF9VUkxgCi0gYFNURUxMQVJfTkVUV09SS2AsIGBTVEVMTEFSX0hPUklaT05fVVJMYCwgYW5kIGBTVEVMTEFSX1JQQ19VUkxgCi0gYFNURUxMQVJfT1BFUkFUT1JfU0VDUkVUX0tFWWAgYW5kIGBTVEVMTEFSX09QRVJBVE9SX1BVQkxJQ19LRVlgCi0gYE5FWFRfUFVCTElDX1NURUxMQVJfT1BFUkFUT1JfUFVCTElDX0tFWWA KLSBgTkVYVF9QVUJMSUNfVEFMT1NfUkVHSVNUUllfQ09OVFJBQ1RgIGFuZCBgTkVYVF9QVUJMSUNfVEFMT1NfTkFNRV9TRVJWSUNFX0NPTlRSQUNUYAotIGBYNDAyX0ZBQ0lMSVRBVE9SX1VSTGAsIGBYNDAyX0FQSV9LRVlgLCBhbmQgYFg0MDJfU0VUVExFTUVOVF9ORVRXT1JLYAotIGBHUk9RX0FQSV9LRVlgIG9yIGBPUEVOQUlfQVBJX0tFWWA KLSBgVEFWSUxZX0FQSV9LRVlgCgpJZiB5b3UgZGVwbG95IG5ldyBjb250cmFjdHMsIHVwZGF0ZSB0aGUgY29udHJhY3QgSURzIGluIGB3ZWIvLmVudi5sb2NhbGAgd2l0aCB0aGUgdmFsdWVzIHByaW50ZWQgYnkgYGNvbnRyYWN0cy9kZXBsb3kuc2hgLgoKIyMjIFByaW1lIGFnZW50IGVudgoKYHBhY2thZ2VzL3ByaW1lLWFnZW50Ly5lbnYuZXhhbXBsZWAgY29uZmlndXJlcyB0aGUgVGFsb3MgYWdlbnQgcnVudGltZS4gSXQgZG9jdW1lbnRzOgoKLSBgVEFMT1NfQVBJX0tFWWAgb3IgYFRBTE9TX0FQSV9LRVlTYAotIGBUQUxPU19JRGAgYW5kIGBUQUxPU19BUElfVVJMYAotIGBHUk9RX0FQSV9LRVlgIG9yIGBPUEVOQUlfQVBJX0tFWWA KLSBgWF9VU0VSTkFNRWAsIGBYX1BBU1NXT1JEYCwgYW5kIGBYX0VNQUlMYAotIGBCUk9XU0VSX0hFQURMRVNTYAotIGFnZW50IHRpbWluZyBhbmQgYXBwcm92YWwgc2V0dGluZ3Mgc3VjaCBhcyBgQUdFTlRfQ1lDTEVfSU5URVJWQUxgLCBgUE9MTElOR19JTlRFUlZBTGAsIGFuZCBgQVBQUk9WQUxfVEhSRVNIT0xEYAotIG9wdC1pbiBkdXJhYmxlIGpvYiBpbmJveC9vdXRib3ggc2V0dGluZ3MgdW5kZXIgYFRBTE9TX0RVUkFCTEVfSk9CX0VGRkVDVFNfKmAgYW5kIGBUQUxPU19KT0JfRUZGRUNUXypgCgojIyMgQ29udHJhY3RzIGVudgoKYGNvbnRyYWN0cy8uZW52LmV4YW1wbGVgIGlzIGZvciBjb250cmFjdCBkZXBsb3ltZW50IGFuZCBzaWduZXIgY29uZmlndXJhdGlvbi4gSXQgaW5jbHVkZXM6CgotIGBTVEVMTEFSX1NFQ1JFVF9LRVlgCi0gYFRBTE9TX1BST1RPQ09MX1dBTExFVGAgCi0gY29tbWVudGVkIHBsYWNlaG9sZGVycyBmb3IgdGhlIHBvc3QtZGVwbG95bWVudCBjb250cmFjdCBJRHMgdXNlZCBieSB0aGUgd2ViIGFwcAoKIyMgUnVubmluZyB0aGUgUHJvamVjdAoKIyMjIE9uZS1jb21tYW5kIGxvY2FsIGludGVncmF0aW9uIHN0YWNrCgpBIHJlcHJvZHVjaWJsZSBsb2NhbCBpbnRlZ3JhdGlvbiBzdGFjayBpcyBhdmFpbGFibGUgZm9yIGNvbnRyaWJ1dG9yczoKCmBgYGJhc2gKcG5wbSBzdGFjazp1cApgYGAKClRoaXMgc3RhcnRzIFBvc3RncmVTUUwsIGEgbW9jayBTdGVsbGFyIHByb3ZpZGVyLCB0aGUgd2ViIGFwcCwgYW5kIHNlZWRzIHRoZSBsb2NhbCBkYXRhYmFzZS4gVGhlIHdlYiBzZXJ2aWNlIGV4cG9zZXMgaGVhbHRoIGFuZCByZWFkaW5lc3MgZW5kcG9pbnRzIGF0IGAvYXBpL2hlYWx0aGAgYW5kIGAvYXBpL2hlYWx0aC9yZWFkeWAuCgpVc2UgdGhlc2UgY29tbWFuZHMgdG8gbWFuYWdlIHRoZSBlbnZpcm9ubWVudDoKCmBgYGJhc2gKcG5wbSBzdGFjazpsb2dzCnBucG0gc3RhY2s6ZG93bgpwbnBtIHN0YWNrOnJlc2V0CmBgYAoKYHBucG0gc3RhY2s6cmVzZXRgIGRlc3Ryb3lzIHRoZSBzdGFjayB2b2x1bWVzIGFuZCByZS1pbXBvcnRzIGV2ZXJ5dGhpbmcuIFRvIGNsZWFyCmxvY2FsIHRlc3QgZGF0YSB3aXRob3V0IHJlY3JlYXRpbmcgdGhlIHN0YWNrLCB1c2UgdGhlIHNhZmUgcmVzZXQgaW5zdGVhZDoKCmBgYGJhc2gKcG5wbSBzdGFjazpyZXNldC1kYXRhIC0tZHJ5LXJ1biAgICAjIHByZXZpZXcgdGhlIHRhYmxlcyBhbmQgcm93IGNvdW50cwpwbnBtIHN0YWNrOnJlc2V0LWRhdGEgLS15ZXMgICAgICAgICMgdHJ1bmNhdGUgbG9jYWwgdGVzdCBkYXRhCnBucG0gc3RhY2s6cmVzZXQtZGF0YSAtLXllcyAtLXNlZWQgIyB0cnVuY2F0ZSwgdGhlbiByZS1ydW4gZGI6c2VlZApgYGAKCkl0IG9ubHkgZXZlciB0YXJnZXRzIGEgbG9vcGJhY2sgZGF0YWJhc2UsIHJlcXVpcmVzIGAtLXllc2AgdG8gZGVzdHJveSBhbnl0aGluZywKYW5kIG5ldmVyIGxvZ3MgY3JlZGVudGlhbHMuIFNlZQpbZG9jcy9sb2NhbC10ZXN0LWRhdGEtcmVzZXQubWRdKC4vZG9jcy9sb2NhbC10ZXN0LWRhdGEtcmVzZXQubWQpIGZvciB0aGUgZnVsbApiZWhhdmlvciBjb250cmFjdC4gUmVncmVzc2lvbiB0ZXN0cyBmb3IgdGhlIHNoZWxsIGxheWVyOiBgYmFzaCBzY3JpcHRzL2xvY2FsLXN0YWNrLnRlc3Quc2hgLgoKVGhlIHN0YWNrIGRlZmF1bHRzIHRvIHRoZSB3ZWIgc2VydmljZSBhbmQgYSBtb2NrIFN0ZWxsYXIgcHJvdmlkZXIuIEFkZCB0aGUgb3B0aW9uYWwgcHJpbWUtYWdlbnQgc2VydmljZSB3aXRoOgoKYGBgYmFzaApkb2NrZXIgY29tcG9zZSAtLXByb2ZpbGUgYWdlbnQgdXAgLWQgcHJpbWUtYWdlbnQKYGBgCgojIyMjIERldGVybWluaXN0aWMgc21va2UgZml4dHVyZQoKVGhlIGxvY2FsIHN0YWNrJ3MgZXhwZWN0ZWQgc2hhcGUg4oCUIHBvcnRzLCBoZWFsdGggZW5kcG9pbnRzLCBhbmQgbW9jayBtYXJrZXRwbGFjZQphZ2VudHMg4oCUIGlzIGNhcHR1cmVkIGluIGEgZGV0ZXJtaW5pc3RpYyBmaXh0dXJlIGF0CmB3ZWIvdGVzdHMvZml4dHVyZXMvc21va2UtZml4dHVyZS5qc29uYC4gUmVnZW5lcmF0aW5nIGl0IGlzIGJ5dGUtc3RhYmxlIChubwp0aW1lc3RhbXBzLCByYW5kb21uZXNzLCBvciBuZXR3b3JrKTogZXZlcnkgcnVuIG9uIGFueSBtYWNoaW5lIHByb2R1Y2VzIGlkZW50aWNhbApvdXRwdXQsIHNvIGRpZmZzIGluIHJldmlldyBhcmUgbWVhbmluZ2Z1bC4KClRoZSBleGFjdCBsb2NhbCBjb21tYW5kIHRvIHZlcmlmeSB0aGUgZml4dHVyZSBpcyBjYW5vbmljYWwgYW5kIGRyaWZ0LWZyZWU6CgpgYGBiYXNoCnBucG0gc21va2U6Zml4dHVyZTpjaGVjawpgYGAKClRvIHJlZ2VuZXJhdGUgaXQgYWZ0ZXIgaW50ZW50aW9uYWxseSBjaGFuZ2luZyB0aGUgZml4dHVyZSBkZWZpbml0aW9uIGluCmBzY3JpcHRzL3Ntb2tlLWZpeHR1cmUubGliLm1qc2A6CgpgYGBiYXNoCnBucG0gc21va2U6Zml4dHVyZTpnZW4KYGBgCgpGb2N1c2VkIHRlc3RzIChwb3NpdGl2ZSwgbmVnYXRpdmUsIGJvdW5kYXJ5LCByZWdyZXNzaW9uLCBhbmQgcHJpdmFjeSBjb3ZlcmFnZSk6CgpgYGBiYXNoCnBucG0gLS1kaXIgd2ViIGV4ZWMgdml0ZXN0IHJ1biB0ZXN0cy9zbW9rZS1maXh0dXJlLnVuaXQudGVzdC50cwpgYGAKCkJlaGF2aW9yIG5vdGVzOgoKLSBgKipGYWlsIGNsb3NlZCoqIOKAlCBhbWJpZ3VvdXMsIG1hbGZvcm1lZCwgb3Igc2VjcmV0LXNoYXBlZCBpbnB1dCBhYm9ydHMgd2l0aCBhCiAgbm9uLXplcm8gZXhpdCBhbmQgYW4gZXhwbGljaXQsIHByaXZhY3ktc2FmZSBlcnJvci4gRmllbGQgbmFtZXMgdGhhdCBsb29rIGxpa2UKICBzZWNyZXRzIChgc2VjcmV0YCwgYHNlZWRgLCBgcHJpdmF0ZSBrZXlgLCBgcGFzc3dvcmRgLCBgYXBpIGtleWAsIGBwcm9vZmAsIOKApikKICBhcmUgcmVqZWN0ZWQgb3V0cmlnaHQgYW5kIHRoZWlyIHZhbHVlcyBhcmUgbmV2ZXIgbG9nZ2VkIG9yIHJldHVybmVkLgotIGAqKlBsYWNlaG9sZGVyIGRhdGEgb25seSoqIOKAlCB0aGUgZml4dHVyZSBuZXZlciBjb250YWlucyByZWFsIGtleXMsIHNlZWRzLCBvcgogIHBheW1lbnQgcHJvb2ZzOyBhZ2VudCBhZGRyZXNzZXMgYXJlIGRldGVybWluaXN0aWMgdHJ1bmNhdGVkIHBsYWNlaG9sZGVycyBpbgogIHRoZSBzYW1lIHN0eWxlIGFzIHRoZSBkZW1vIHNlZWQuCi0gKipDSSoqIOKAlCBgcG5wbSBzbW9rZTpmaXh0dXJlOmNoZWNrYCBpcyBzYWZlIHRvIHdpcmUgaW50byBhbnkgd29ya2Zsb3cgc3RlcDsKICBpdCBleGl0cyBgMGAgd2hlbiB0aGUgY29tbWl0dGVkIGZpeHR1cmUgbWF0Y2hlcyB0aGUgY2Fub25pY2FsIG91dHB1dCBhbmQgYDFgCiAgd2l0aCBhIHJlZ2VuZXJhdGlvbiBoaW50IG90aGVyd2lzZS4KCiMjIyBXZWIKCkZyb20gdGhlIHJlcG8gcm9vdDoKCmBgYGJhc2gKcG5wbSBkZXYKYGBgCgpPciBmcm9tIGB3ZWIvYDoKCmBgYGJhc2gKY2Qgd2ViCnBucG0gZGV2CmBgYAoKT3RoZXIgdXNlZnVsIHdlYiBjb21tYW5kczoKCmBgYGJhc2gKcG5wbSBidWlsZApwbnBtIGxpbnQKcG5wbSB0ZXN0OnVuaXQKcG5wbSB0ZXN0OmUyZQpwbnBtIHRlc3Q6YmVuY2ggICAgICAgIyBSdW4gcGVyZm9ybWFuY2UgYmVuY2htYXJrcwpgYGAKClNlZSBbQkVOQ0hNQVJLUy5tZF0oLi9CRU5DSE1BUktTLm1kKSBmb3IgdGhlIGJlbmNobWFyayBzeXN0ZW0gZG9jdW1lbnRhdGlvbi4KCkFueSBQUiB0aGF0IGNoYW5nZXMgYHdlYi9kcml6emxlLyoqYCBvciBgd2ViL3NyYy9kYi8qKmAgaXMgdmFsaWRhdGVkIGJ5IHRoZSBgV2ViIE1pZ3JhdGlvbnMgQ0lgCndvcmtmbG93LCB3aGljaCBhcHBsaWVzIHlvdXIgbWlncmF0aW9ucyB0byBhbiBlcGhlbWVyYWwgUG9zdGdyZXMgaW5zdGFuY2UuIFNlZQpbYE1JR1JBVElPTlMubWRgXSguL01JR1JBVElPTlMubWQpIGZvciB3aGF0IGl0IGNoZWNrcywgaG93IHRvIHJlcHJvZHVjZSBpdCBsb2NhbGx5LCBhbmQgcm9sbGJhY2sKZ3VpZGFuY2UuCgojIyMgUHJpbWUgQWdlbnQKCmBgYGJhc2gKY2QgcGFja2FnZXMvcHJpbWUtYWdlbnQKdXYgcnVuIHRhbG9zLWFnZW50IHN0YXJ0CmBgYAoKIyMjIENvbnRyYWN0cwoKYGBgYmFzaApjZCBjb250cmFjdHMKY2FyZ28gdGVzdApjYXJnbyBidWlsZCAtLXRhcmdldCB3YXNtMzItdW5rbm93bi11bmtub3duIC0tcmVsZWFzZQpgYGAKCklmIHlvdSBhcmUgaXRlcmF0aW5nIG9uIGNvbnRyYWN0IGJlaGF2aW9yLCBhbHNvIHJ1biB0aGUgV2FzbS10YXJnZXQgdGVzdCBwYXRoIHVzZWQgYnkgQ0k6CgpgYGBiYXNoCmNhcmdvIHRlc3QgLS10YXJnZXQgd2FzbTMyLXVua25vd24tdW5rbm93bgpgYGAKCiMjIEZvY3VzZWQgVGVzdCBTZWxlY3Rpb24gYW5kIENJIFRyaWFnZQoKUnVuIHRoZSBzbWFsbGVzdCB0ZXN0IHNldCB0aGF0IGNvdmVycyB0aGUgZmlsZXMgeW91IHRvdWNoZWQgYmVmb3JlIGZhbGxpbmcgYmFjayB0byBhIGZ1bGwgc3VpdGUuIFRoZSBjb21tYW5kcyBiZWxvdyBhdm9pZCBkYXRhYmFzZSByZXNldHMgYW5kIGhpZGRlbiBsb2NhbCBzdGF0ZS4gUnVuIHRoZW0gYWZ0ZXIgaW5zdGFsbGluZyBkZXBlbmRlbmNpZXMgd2l0aCBgcG5wbSBpbnN0YWxsYCBhdCB0aGUgcmVwb3NpdG9yeSByb290LCBgdXYgc3luYyAtLWV4dHJhIGRldmAgaW4gYHBhY2thZ2VzL3ByaW1lLWFnZW50L2AsIG9yIHRoZSBSdXN0IHNldHVwIGZyb20gdGhlIHByZXJlcXVpc2l0ZXMuIEluIHRoaXMgc2VjdGlvbiwgY29tbWFuZHMgdGhhdCBjYWxsIHBhY2thZ2Ugc2NyaXB0cyB1c2UgYHBucG0gcnVuIDxzY3JpcHQ+YCBzbyB0aGUgc2NyaXB0IG5hbWUgY2FuIGJlIGNoZWNrZWQgZGlyZWN0bHkgaW4gdGhlIHBhY2thZ2UncyBgcGFja2FnZS5qc29uYC4KCiMjIyBXZWIgY2hhbmdlcwoKVXNlIHRoZSB3ZWIgcGFja2FnZSBzY3JpcHRzIGZvciBOZXh0LmpzLCBBUEksIGRhdGFiYXNlLCBhbmQgRGV2WCBjaGFuZ2VzLiBUaGUgbWFpbiB0ZXN0IGFydGlmYWN0IGlzIHRoZSBWaXRlc3QgcmVwb3J0IGluIHN0ZG91dC4gQmVuY2htYXJrIGpvYnMgYWxzbyB1cGxvYWQgYC5iZW5jaG1hcmtzL2AgYXMgdGhlIGBiZW5jaG1hcmstYXJ0aWZhY3RzYCB3b3JrZmxvdyBhcnRpZmFjdC4KCmBgYGJhc2gKIyBQT1NJWCCTZWxscwpwbnBtIC0tZGlyIHdlYiBleGVjIHZpdGVzdCBydW4gdGVzdHMvaGVhbHRoLnRlc3QudHMKcG5wbSAtLWRpciB3ZWIgZXhlYyB2aXRlc3QgcnVuIHRlc3RzLyoudW5pdC50ZXN0LnRzCnBucG0gLS1kaXIgd2ViIGV4ZWMgdml0ZXN0IHJ1biB0ZXN0cy9vcGVuYXBpLXNuYXBzaG90LnRlc3QudHMKcG5wbSAtLWRpciB3ZWIgZXhlYyB2aXRlc3QgcnVuIHNyYy9hcmVhL2RldngvX190ZXN0c19fL3J1bm5lci50ZXN0LnRzCnBucG0gLS1kaXIgd2ViIHJ1biBsaW50CnBucG0gLS1kaXIgd2ViIGV4ZWMgdHNjIC0tbm9FbWl0CmBgYAoKYGBgcG93ZXJzaGVsbAojIFdpbmRvd3MgUG93ZXJTaGVsbApwbnBtIC0tZGlyIHdlYiBleGVjIHZpdGVzdCBydW4gdGVzdHNcaGVhbHRoLnRlc3QudHMKcG5wbSAtLWRpciB3ZWIgZXhlYyB2aXRlc3QgcnVuIHRlc3RzXCoudW5pdC50ZXN0LnRzCnBucG0gLS1kaXIgd2ViIGV4ZWMgdml0ZXN0IHJ1biB0ZXN0c1xvcGVuYXBpLXNuYXBzaG90LnRlc3QudHMKcG5wbSAtLWRpciB3ZWIgZXhlYyB2aXRlc3QgcnVuIHNyY1xhcmVhXGRldnhcX190ZXN0c19fXHJ1bm5lci50ZXN0LnRzCnBucG0gLS1kaXIgd2ViIHJ1biBsaW50CnBucG0gLS1kaXIgd2ViIGV4ZWMgdHNjIC0tbm9FbWl0CmBgYAoKQ2hvb3NlIHRoZSBmb2N1c2VkIGNvbW1hbmQgYnkgYXJlYToKCnwgQ2hhbmdlZCBmaWxlcyB8IEZvY3VzZWQgY29tbWFuZCB8IENJIHdvcmtmbG93IHwKfCAtLS0gfCAtLS0gfCAtLS0gfAp8IGB3ZWIvc3JjL2FwcC9hcGkvKipgLCBgd2ViL3NyYy9saWIvb3BlbmFwaS50c2AsIGB3ZWIvdGVzdHMvZml4dHVyZXMvb3BlbmFwaS5zbmFwc2hvdC5qc29uYCB8IGBwbnBtIC0tZGlyIHdlYiBleGVjIHZpdGVzdCBydW4gdGVzdHMvb3BlbmFwaS1zbmFwc2hvdC50ZXN0LnRzYCB8IGBXZWIgT3BlbkFQSSBDSWAgfAp8IGB3ZWIvZHJpenpsZS8qKmAsIGB3ZWIvc3JjL2RiLyoqYCwgYHdlYi9kcml6emxlLmNvbmZpZy50c2AgfCBgcG5wbSAtLWRpciB3ZWIgcnVuIGRiOjptaWdyYXRlYCwgdGhlbiB0aGUgc3BlY2lmaWMgREIgdGVzdCB3aXRoIGBwbnBtIC0tZGlyIHdlYiBleGVjIHZpdGVzdCBydW4gdGVzdHMvPG5hbWU+LnRlc3QudHNgIHwgYFdlYiBNaWdyYXRpb25zIENJYCB8CnwgYHdlYi9zcmMvYXJlYS9kZXZ4LyoqYCB8IGBwbnBtIC0tZGlyIHdlYiBleGVjIHZpdGVzdCBydW4gc3JjL2FyZWEvZGV2eC9fX3Rlc3RzX18vcnVubmVyLnRlc3QudHNgIHwgYEJlbmNobWFyayBDSSAtIHJlZ3Jlc3Npb24gZ2F0ZXNgIHwKfCBBUEkgcm91dGUgb3IgbGlicmFyeSB1bml0IHRlc3RzIHwgYHBucG0gLS1kaXIgd2ViIGV4ZWMgdml0ZXN0IHJ1biB0ZXN0cy88bmFtZT4udGVzdC50c2AgfCBgRGVwbG95IFdlYiAtPiBWZXJjZWxgIHwKfCBMb2NhbCB0ZXN0LWRhdGEgcmVzZXQgKGB3ZWIvc3JjL2xpYi9sb2NhbC10ZXN0LWRhdGEtcmVzZXQudHNgLCBgd2ViL3NyYy9kYi9yZXNldC10ZXN0LWRhdGEudHNgLCBgc2NyaXB0cy9sb2NhbC1zdGFjay5zaGApIHwgYHBucG0gLS1kaXIgd2ViIGV4ZWMgdml0ZXN0IHJ1biB0ZXN0cy9sb2NhbC10ZXN0LWRhdGEtcmVzZXQudW5pdC50ZXN0LnRzOyBiYXNoIHNjcmlwdHMvbG9jYWwtc3RhY2sudGVzdC5zaGAgfCBgRGVwbG95IFdlYiAtPiBWZXJjZWxgIHwKfCBCYWNrdXAgb3IgcmVzdG9yZSBwYXRocyB8IGBwbnBtIC0tZGlyIHdlYiBleGVjIHZpdGVzdCBydW4gdGVzdHMvYmFja3VwLXJlc3RvcmUtZml4dHVyZS50ZXN0LnRzIHRlc3RzL2JhY2t1cC1jcnlwdG8udGVzdC50cyB0ZXN0cy9iYWNrdXAtdHlwZXMudGVzdC50c2AgfCBgV2ViIEJhY2t1cHMgQ0lgIHwKClVzZSBgcG5wbSAtLWRpciB3ZWIgcnVuIHRlc3Q6ZTJlYCBvbmx5IHdoZW4gQVBJIHJvdXRlIGJlaGF2aW9yIGRlcGVuZHMgb24gdGhlIHJ1bm5pbmcgYXBwIG9yIGNyb3NzLXJvdXRlIHN0YXRlLiBVc2UgdGhlIGxvY2FsIHN0YWNrIHdpdGggYHBucG0gc3RhY2s6dXBgIHdoZW4geW91IG5lZWQgUG9zdGdyZXMgcGx1cyB0aGUgbW9jayBTdGVsbGFyIHByb3ZpZGVyLCBhbmQgY2xlYW4gaXQgdXAgd2l0aCBgcG5wbSBzdGFjazpkb3duYC4gRG8gbm90IHVzZSBgcG5wbSBzdGFjazpyZXNldGAgdW5sZXNzIHlvdSBpbnRlbnRpb25hbGx5IHdhbnQgdG8gZGVzdHJveSBhbmQgcmVjcmVhdGUgbG9jYWwgc3RhY2sgZGF0YTsgYHBucG0gc3RhY2s6cmVzZXQtZGF0YWAgY2xlYXJzIHRlc3Qgcm93cyB3aXRob3V0IHRvdWNoaW5nIHRoZSBzdGFjayB2b2x1bWVzLgoKIyMjIFNESyBjaGFuZ2VzCgpUaGUgVHlwZVNjcmlwdCBTRUsgbGl2ZXMgaW4gYHBhY2thZ2VzL3Nkay9gLiBUaGUgZXhwZWN0ZWQgYnVpbGQgYXJ0aWZhY3QgaXMgYHBhY2thZ2VzL3Nkay9kaXN0L2AsIGluY2x1ZGluZyB0aGUgYnJvd3NlciBidW5kbGUgYXQgYHBhY2thZ2VzL3Nkay9kaXN0L2Jyb3dzZXIvc2RrLmJ1bmRsZS5qc2AuCgpgYGBiYXNoCiMgUE9TSVggc2hlbGxzCnBucG0gLS1maWx0ZXIgQHRhbG9zLXByb3RvY29sL3NkayBleGVjIHZpdGVzdCBydW4gdGVzdHMvY2xpZW50LnRlc3QudHMKcG5wbSAtLWZpbHRlciBAdGFsb3MtcHJvdG9jb2wvc2RrIHJ1biBidWlsZApwbnBtIC0tZmlsdGVyIEB0YWxvcy1wcm90b2NvbC9zZGsgZXhlYyB0c2MgLS1ub0VtaXQKYGBgCgpgYGBwb3dlcnNoZWxsCiMgV2luZG93cyBQb3dlclNoZWxsCnBucG0gLS1maWx0ZXIgQHRhbG9zLXByb3RvY29sL3NkayBleGVjIHZpdGVzdCBydW4gdGVzdHNcY2xpZW50LnRlc3QudHMKcG5wbSAtLWZpbHRlciBAdGFsb3MtcHJvdG9jb2wvc2RrIHJ1biBidWlsZApwbnBtIC0tZmlsdGVyIEB0YWxvcy1wcm90b2NvbC9zZGsgZXhlYyB0c2MgLS1ub0VtaXQKYGBgCgpDaG9vc2UgdGhlIGZvY3VzZWQgY29tbWFuZCBieSBhcmVhOgoKfCBDaGFuZ2VkIGZpbGVzIHwgRm9jdXNlZCBjb21tYW5kIHwgQ0kgd29ya2Zsb3cgfAp8IC0tLSB8IC0tLSB8IC0tLSB8CnwgYHBhY2thZ2VzL3Nkay9zcmMvKipgLCBgcGFja2FnZXMvc2RrL3Rlc3RzLyoqYCB8IGBwbnBtIC0tZmlsdGVyIEB0YWxvcy1wcm90b2NvbC9zZGsgZXhlYyB2aXRlc3QgcnVuIHRlc3RzLzxuYW1lPi50ZXN0LnRzYCB8IGBTREsgQ29tcGF0aWJpbGl0eSBUZXN0c2AgfAp8IGBwYWNrYWdlcy9zZGsvcGFja2FnZS5qc29uYCwgYHBucG0tbG9jay55YW1sYCB8IGBwbnBtIC0tZmlsdGVyIEB0YWxvcy1wcm90b2NvbC9zZGsgcnVuIGJ1aWxkYCB8IGBTREsgQ29tcGF0aWJpbGl0eSBUZXN0c2AgfAp8IGBwYWNrYWdlcy9wcmltZS1hZ2VudC8qKmAgfCBgY2QgcGFja2FnZXMvcHJpbWUtYWdlbnQgJiYgdXYgcnVuIHB5dGVzdGAgfCBgUHJpbWUgQWdlbnQgQ0lgIHwKfCBgY29udHJhY3RzLyoqYCB8IGBjZCBjb250cmFjdHMgJiYgY2FyZ28gdGVzdGAgfCBgQ29udHJhY3RzIENJYCB8CgojIyBQdWxsIFJlcXVlc3QgV29ya2Zsb3cKCjEuIEZvcmsgdGhlIHJlcG8gYW5kIGJyYW5jaCBmcm9tIHRoZSBsYXRlc3QgYG1haW5gLgoyLiBLZWVwIGNoYW5nZXMgZm9jdXNlZCBvbiBhIHNpbmdsZSBpc3N1ZSBhbmQgbGluayB0aGUgUFIgd2l0aCBgQ2xvc2VzICM8aXNzdWU+YC4KMy4gUnVuIHRoZSBmb2N1c2VkIHRlc3RzIGZvciB0aGUgYXJlYXMgeW91IHRvdWNoZWQgYmVmb3JlIG9wZW5pbmcgdGhlIFBSLgo0LiBJbmNsdWRlIGV2aWRlbmNlIChsb2dzIG9yIGEgc2NyZWVuc2hvdCkgZm9yIG5ldyBkZXZlbG9wbWVudCBlbnZpcm9ubWVudCBjaGFuZ2VzLgo=
+# Contributing to Talos Protocol
+
+Thanks for helping improve Talos Protocol. This guide covers the local development setup for the Node.js, Python, and Rust parts of the monorepo, the required environment files, and the workflow we expect for pull requests.
+
+If you are looking for a good place to start, browse the open Wave issues:
+https://github.com/enliven17/talos-stellar/issues?q=is%3Aissue+is%3Aopen+label%3A%22Stellar+Wave%22
+
+## Prerequisites
+
+Install these before you start working locally:
+
+- Node.js 20 or newer
+- pnpm 9 or newer
+- Python 3.11 or newer
+- `uv`
+- Rust stable toolchain and `cargo`
+- Soroban CLI, installed as `stellar` via `cargo install --locked stellar-cli --features opt`
+- [`gitleaks`](https://github.com/gitleaks/gitleaks) secret scanner — `brew install gitleaks`, or download a binary from the [releases page](https://github.com/gitleaks/gitleaks/releases) (required for `pnpm run secrets:check`)
+
+For the Rust contracts, also add the Wasm target:
+
+```bash
+rustup target add wasm32-unknown-unknown
+```
+
+## Devcontainer (Codespaces / VS Code)
+
+The repo ships a devcontainer definition at `.devcontainer/devcontainer.json` that installs Node 20, pnpm, Python 3.11, Rust stable with the `wasm32-unknown-unknown` target, and `stellar-cli`. It forwards the ports used by `docker-compose.yml` and the web dev server, and its post-create command installs the workspace dependencies.
+
+- GitHub Codespaces: open the repo and select **Codespaces > New with devcontainer(...)**.
+- VS Code locally: install the **Dev Containers** extension, then run **Dev Containers: Reopen in Container**.
+
+The first build downloads the base image and compiles `stellar-cli`. On a cold cache this typically takes **8 to 15 minutes**; subsequent rebuilds reuse the layer cache and finish in a minute or two. The post-create command runs `pnpm install` and `uv sync --extra dev` and adds another 1 to 3 minutes on first run.
+
+Once the container is ready, the three acceptance commands run as:
+
+```bash
+pnpm --dir web test:unit
+cd packages/prime-agent && uv run pytest
+cd contracts && cargo test
+```
+
+## Repository Layout
+
+- `web/` - Next.js application, API routes, and frontend
+- `packages/prime-agent/` - Python agent runtime
+- `contracts/` - Soroban smart contracts and deploy scripts (see `contracts/EVENTS.md` for the event schema)
+- `packages/openclaw/` - skill definitions and agent helper code
+
+## Setup
+
+### 1. Clone the repo
+
+```bash
+git clone https://github.com/enliven17/talos-stellar.git
+cd talos-stellar
+```
+
+### 2. Install Node.js dependencies
+
+Install the workspace dependencies from the repository root:
+
+```bash
+pnpm install
+```
+Generate the dependency license report from the installed workspace graph:
+
+```bash
+pnpm licenses:report
+```
+
+The command writes `dist/licenses/dependency-licenses.json` and
+`dist/licenses/dependency-licenses.md`. It fails closed when pnpm cannot read
+the dependency graph or any dependency has missing or ambiguous license
+metadata. The generated directory is a CI artifact and should not be committed.
+
+If you only need the web app, you can still work from the root with `pnpm dev` because the root package forwards to `web/`.
+
+### 3. Set up Python with `uv`
+
+Install the agent dependencies and the dev extras:
+
+```bash
+cd packages/prime-agent
+uv sync --extra dev
+```
+
+Run the agent with:
+
+```bash
+uv run talos-agent start
+```
+
+### 4. Set up Rust and Soroban
+
+From `contracts/`:
+
+```bash
+cargo test
+cargo build --target wasm32-unknown-unknown --release
+```
+
+To deploy the contracts to testnet, use the provided script from a Bash-compatible shell:
+
+```bash
+./deploy.sh testnet
+```
+
+The script prints the deployed contract IDs that need to be copied into the web app environment file.
+
+## Environment Files
+
+The repo already includes verified example files for each runtime. Copy them before running locally:
+
+- `web/.env.example` -> `web/.env.local`
+- `packages/prime-agent/.env.example` -> `packages/prime-agent/.env`
+- `contracts/.env.example` -> `contracts/.env`
+
+### Web app env
+
+`web/.env.example` contains the web app, database, Stellar, x402, and AI service variables. The most important entries are:
+
+- `DATABASE_URL` and `DIRECT_URL`
+- `STELLAR_NETWORK`, `STELLAR_HORIZON_URL`, and `STELLAR_RPC_URL`
+- `STELLAR_OPERATOR_SECRET_KEY` and `STELLAR_OPERATOR_PUBLIC_KEY`
+- `NEXT_PUBLIC_STELLAR_OPERATOR_PUBLIC_KEY`
+- `NEXT_PUBLIC_TALOS_REGISTRY_CONTRACT` and `NEXT_PUBLIC_TALOS_NAME_SERVICE_CONTRACT`
+- `X402_FACILITATOR_URL`, `X402_API_KEY`, and `X402_SETTLEMENT_NETWORK`
+- `GROQ_API_KEY` or `OPENAI_API_KEY`
+- `TAVILY_API_KEY`
+
+If you deploy new contracts, update the contract IDs in `web/.env.local` with the values printed by `contracts/deploy.sh`.
+
+### Prime agent env
+
+`packages/prime-agent/.env.example` configures the Talos agent runtime. It documents:
+
+- `TALOS_API_KEY` or `TALOS_API_KEYS`
+- `TALOS_ID` and `TALOS_API_URL`
+- `GROQ_API_KEY` or `OPENAI_API_KEY`
+- `X_USERNAME`, `X_PASSWORD`, and `X_EMAIL`
+- `BROWSER_HEADLESS`
+- agent timing and approval settings such as `AGENT_CYCLE_INTERVAL`, `POLLING_INTERVAL`, and `APPROVAL_THRESHOLD`
+- opt-in durable job inbox/outbox settings under `TALOS_DURABLE_JOB_EFFECTS_*` and `TALOS_JOB_EFFECT_*`
+
+### Contracts env
+
+`contracts/.env.example` is for contract deployment and signer configuration. It includes:
+
+- `STELLAR_SECRET_KEY`
+- `TALOS_PROTOCOL_WALLET`
+- commented placeholders for the post-deployment contract IDs used by the web app
+
+## Running the Project
+
+### One-command local integration stack
+
+A reproducible local integration stack is available for contributors:
+
+```bash
+pnpm stack:up
+```
+
+This starts PostgreSQL, a mock Stellar provider, the web app, and seeds the local database. The web service exposes health and readiness endpoints at `/api/health` and `/api/health/ready`.
+
+Use these commands to manage the environment:
+
+```bash
+pnpm stack:logs
+pnpm stack:down
+pnpm stack:reset
+```
+
+`pnpm stack:reset` destroys the stack volumes and re-imports everything. To clear
+local test data without recreating the stack, use the safe reset instead:
+
+```bash
+pnpm stack:reset-data --dry-run    # preview the tables and row counts
+pnpm stack:reset-data --yes        # truncate local test data
+pnpm stack:reset-data --yes --seed # truncate, then re-run db:seed
+```
+
+It only ever targets a loopback database, requires `--yes` to destroy anything,
+and never logs credentials. See
+[docs/local-test-data-reset.md](./docs/local-test-data-reset.md) for the full
+behavior contract. Regression tests for the shell layer: `bash scripts/local-stack.test.sh`.
+
+The stack defaults to the web service and a mock Stellar provider. Add the optional prime-agent service with:
+
+```bash
+docker compose --profile agent up -d prime-agent
+```
+
+#### Deterministic smoke fixture
+
+The local stack's expected shape — ports, health endpoints, and mock marketplace
+agents — is captured in a deterministic fixture at
+`web/tests/fixtures/smoke-fixture.json`. Regenerating it is byte-stable (no
+timestamps, randomness, or network): every run on any machine produces identical
+output, so diffs in review are meaningful.
+
+The exact local command to verify the fixture is canonical and drift-free:
+
+```bash
+pnpm smoke:fixture:check
+```
+
+To regenerate it after intentionally changing the fixture definition in
+`scripts/smoke-fixture.lib.mjs`:
+
+```bash
+pnpm smoke:fixture:gen
+```
+
+Focused tests (positive, negative, boundary, regression, and privacy coverage):
+
+```bash
+pnpm --dir web exec vitest run tests/smoke-fixture.unit.test.ts
+```
+
+Behavior notes:
+
+- **Fail closed** — ambiguous, malformed, or secret-shaped input aborts with a
+  non-zero exit and an explicit, privacy-safe error. Field names that look like
+  secrets (`secret`, `seed`, `private key`, `password`, `api key`, `proof`, …)
+  are rejected outright and their values are never logged or returned.
+- **Placeholder data only** — the fixture never contains real keys, seeds, or
+  payment proofs; agent addresses are deterministic truncated placeholders in
+  the same style as the demo seed.
+- **CI** — `pnpm smoke:fixture:check` is safe to wire into any workflow step;
+  it exits `0` when the committed fixture matches the canonical output and `1`
+  with a regeneration hint otherwise.
+
+### Web
+
+From the repo root:
+
+```bash
+pnpm dev
+```
+
+Or from `web/`:
+
+```bash
+cd web
+pnpm dev
+```
+
+Other useful web commands:
+
+```bash
+pnpm build
+pnpm lint
+pnpm test:unit
+pnpm test:e2e
+pnpm test:bench       # Run performance benchmarks
+```
+
+See [BENCHMARKS.md](./BENCHMARKS.md) for the benchmark system documentation.
+
+Any PR that changes `web/drizzle/**` or `web/src/db/**` is validated by the `Web Migrations CI`
+workflow, which applies your migrations to an ephemeral Postgres instance. See
+[`MIGRATIONS.md`](./MIGRATIONS.md) for what it checks, how to reproduce it locally, and rollback
+guidance.
+
+### Prime Agent
+
+```bash
+cd packages/prime-agent
+uv run talos-agent start
+```
+
+### Contracts
+
+```bash
+cd contracts
+cargo test
+cargo build --target wasm32-unknown-unknown --release
+```
+
+If you are iterating on contract behavior, also run the Wasm-target test path used by CI:
+
+```bash
+cargo test --target wasm32-unknown-unknown
+```
+
+## Focused Test Selection and CI Triage
+
+Run the smallest test set that covers the files you touched before falling back to a full suite. The commands below avoid database resets and hidden local state. Run them after installing dependencies with `pnpm install` at the repository root, `uv sync --extra dev` in `packages/prime-agent/`, or the Rust setup from the prerequisites. In this section, commands that call package scripts use `pnpm run <script>` so the script name can be checked directly in the package's `package.json`.
+
+### Web changes
+
+Use the web package scripts for Next.js, API, database, and DevX changes. The main test artifact is the Vitest report in stdout. Benchmark jobs also upload `.benchmarks/` as the `benchmark-artifacts` workflow artifact.
+
+```bash
+# POSIX shells
+pnpm --dir web exec vitest run tests/health.test.ts
+pnpm --dir web exec vitest run tests/*.unit.test.ts
+pnpm --dir web exec vitest run tests/openapi-snapshot.test.ts
+pnpm --dir web exec vitest run src/area/devx/__tests__/runner.test.ts
+pnpm --dir web run lint
+pnpm --dir web exec tsc --noEmit
+```
+
+```powershell
+# Windows PowerShell
+pnpm --dir web exec vitest run tests\health.test.ts
+pnpm --dir web exec vitest run tests\*.unit.test.ts
+pnpm --dir web exec vitest run tests/openapi-snapshot.test.ts
+pnpm --dir web exec vitest run src/area/devx/__tests__/runner.test.ts
+pnpm --dir web run lint
+pnpm --dir web exec tsc --noEmit
+```
+
+Choose the focused command by area:
+
+| Changed files | Focused command | CI workflow |
+| --- | --- | --- |
+| `web/src/app/api/**`, `web/src/lib/openapi.ts`, `web/tests/fixtures/openapi.snapshot.json` | `pnpm --dir web exec vitest run tests/openapi-snapshot.test.ts` | `Web OpenAPI CI` |
+| `web/drizzle/**`, `web/src/db/**`, `web/drizzle.config.ts` | `pnpm --dir web run db:migrate`, then the specific DB test with `pnpm --dir web exec vitest run tests/<name>.test.ts` | `Web Migrations CI` |
+| `web/src/area/devx/**` | `pnpm --dir web exec vitest run src/area/devx/__tests__/runner.test.ts` | `Benchmark CI - regression gates` |
+| API route or library unit tests | `pnpm --dir web exec vitest run tests/<name>.test.ts` | `Deploy Web -> Vercel` |
+| Local test-data reset (`web/src/lib/local-test-data-reset.ts`, `web/src/db/reset-test-data.ts`, `scripts/local-stack.sh`) | `pnpm --dir web exec vitest run tests/local-test-data-reset.unit.test.ts; bash scripts/local-stack.test.sh` | `Deploy Web -> Vercel` |
+| Backup or restore paths | `pnpm --dir web exec vitest run tests/backup-restore-fixture.test.ts tests/backup-crypto.test.ts tests/backup-types.test.ts` | `Web Backups CI` |
+
+Use `pnpm --dir web run test:e2e` only when API route behavior depends on the running app or cross-route state. Use the local stack with `pnpm stack:up` when you need Postgres plus the mock Stellar provider, and clean it up with `pnpm stack:down`. Do not use `pnpm stack:reset` unless you intentionally want to destroy and recreate local stack data; `pnpm stack:reset-data` clears test rows without touching the stack volumes.
+
+### SDK changes
+
+The TypeScript SDK lives in `packages/sdk/`. The expected build artifact is `packages/sdk/dist/`, including the browser bundle at `packages/sdk/dist/browser/sdk.bundle.js`.
+
+```bash
+# POSIX shells
+pnpm --filter @talos-protocol/sdk exec vitest run tests/client.test.ts
+pnpm --filter @talos-protocol/sdk run build
+pnpm --filter @talos-protocol/sdk exec tsc --noEmit
+```
+
+```powershell
+# Windows PowerShell
+pnpm --filter @talos-protocol/sdk exec vitest run tests\client.test.ts
+pnpm --filter @talos-protocol/sdk run build
+pnpm --filter @talos-protocol/sdk exec tsc --noEmit
+```
+
+Choose the focused command by area:
+
+| Changed files | Focused command | CI workflow |
+| --- | --- | --- |
+| `packages/sdk/src/**`, `packages/sdk/tests/**` | `pnpm --filter @talos-protocol/sdk exec vitest run tests/<name>.test.ts` | `SDK Compatibility Tests` |
+| `packages/sdk/src/generated-types.ts`, `web/tests/fixtures/openapi.snapshot.json` | `pnpm --filter @talos-protocol/sdk run build`, then verify `git diff` | `SDK Types CI` |
+| SDK build, packaging, or browser bundle files | `pnpm --filter @talos-protocol/sdk run build` | `SDK Compatibility Tests` |
+
+If `SDK Compatibility Tests` reports a missing `compat:*` script, check `.github/workflows/sdk-compatibility.yml` and `packages/sdk/package.json` together. The workflow invokes smoke-test script names, while the package manifest is the source of available local scripts.
+
+### Prime Agent changes
+
+The Python agent uses `uv` from `packages/prime-agent/`. The expected artifacts are pytest and ruff output in the CI log.
+
+```bash
+# POSIX shells
+cd packages/prime-agent
+uv run pytest tests/test_scheduler.py -v
+uv run pytest tests/ -v
+uv run ruff check src tests
+```
+
+```powershell
+# Windows PowerShell
+Set-Location packages\prime-agent
+uv run pytest tests\test_scheduler.py -v
+uv run pytest tests\ -v
+uv run ruff check src tests
+Set-Location ..\..
+```
+
+Choose the focused command by area:
+
+| Changed files | Focused command | CI workflow |
+| --- | --- | --- |
+| `packages/prime-agent/src/talos_agent/scheduler.py` | `uv run pytest tests/test_scheduler.py -v` | `Prime Agent CI` |
+| `packages/prime-agent/src/talos_agent/backup_service.py`, `packages/prime-agent/tests/test_backup_service.py` | `uv run pytest tests/test_backup_service.py -v` | `Web Backups CI`, `Prime Agent CI` |
+| Any other agent module | `uv run pytest tests/test_<area>.py -v`, plus `uv run ruff check src tests` | `Prime Agent CI` |
+
+Some integration tests need external credentials or services such as Stellar, browser adapters, social adapters, or AI providers. If a failure is caused by a missing environment variable or refused network connection, document it as environment-dependent in your PR instead of replacing it with a broad unrelated suite.
+
+### Contract changes
+
+The Soroban contracts live in `contracts/`. The expected build artifacts are Wasm files under `contracts/target/wasm32-unknown-unknown/release/`.
+
+```bash
+# POSIX shells
+cd contracts
+cargo test -p talos-registry
+cargo test
+cargo build --target wasm32-unknown-unknown --release
+pnpm --dir contracts exec tsc --noEmit
+pnpm --dir contracts exec vitest run fixtures
+```
+
+```powershell
+# Windows PowerShell
+Set-Location contracts
+cargo test -p talos-registry
+cargo test
+cargo build --target wasm32-unknown-unknown --release
+pnpm --dir contracts exec tsc --noEmit
+pnpm --dir contracts exec vitest run fixtures
+Set-Location ..
+```
+
+Choose the focused command by area:
+
+| Changed files | Focused command | CI workflow |
+| --- | --- | --- |
+| `contracts/talos_registry/**` | `cargo test -p talos-registry` | `Contracts CI` |
+| `contracts/talos_name_service/**` | `cargo test -p talos-name-service` | `Contracts CI` |
+| `contracts/talos_governance/**` | `cargo test -p talos-governance` | `Contracts CI` |
+| `contracts/ttl_manager/**` | `cargo test -p ttl-manager` | `Contracts CI` |
+| `contracts/storage_migration/**` | `cargo test -p storage-migration` | `Contracts CI` |
+| `contracts/fixtures/**` | `pnpm --dir contracts exec tsc --noEmit; pnpm --dir contracts exec vitest run fixtures` | `Contracts CI` |
+| Contract release output or Wasm compatibility | `cargo build --target wasm32-unknown-unknown --release` | `Contracts CI` |
+
+Deploy commands such as `pnpm --dir contracts run deploy:testnet` and `./deploy.sh testnet` require configured Stellar credentials and network access. Treat failures from missing signers, RPC timeouts, Horizon rate limits, or Soroban testnet availability as deployment-environment issues unless local `cargo test` or Wasm build also fails.
+
+### Runbook changes
+
+Any `*RUNBOOK*.md` (for example [`docs/DR_RUNBOOK.md`](./docs/DR_RUNBOOK.md)) is validated for
+required sections (triggers, verification, recovery, troubleshooting) and for referenced files and
+commands actually existing. See [`OBSERVABILITY.md`](./OBSERVABILITY.md) for the monitoring signals
+those runbooks respond to.
+
+```bash
+node scripts/validate-runbooks.mjs .
+node --test scripts/validate-runbooks.test.mjs
+```
+
+| Changed files | Focused command | CI workflow |
+| --- | --- | --- |
+| `docs/*RUNBOOK*.md`, `*RUNBOOK*.md`, `OBSERVABILITY.md` | `node scripts/validate-runbooks.mjs .` | `Runbook Validation CI` |
+
+The validator fails closed: a runbook missing a required section, a referenced file that no longer
+exists, an unresolvable `pnpm --dir`/`pnpm --filter` script, or an unknown `uv run` binary are all
+errors, and finding zero runbooks at all is treated as an error rather than silently passing.
+
+### Common failure messages
+
+| Message | Usually means | Next step |
+| --- | --- | --- |
+| `ERR_PNPM_OUTDATED_LOCKFILE` or frozen lockfile failures | `package.json` and lockfile are out of sync | Re-run the same install command locally and commit lockfile changes only when dependency changes are intentional. |
+| `No test files found` | The path or glob does not match from the package working directory | Re-run from the package root or use `pnpm --dir <package> exec vitest run <path>`. |
+| `DATABASE_URL` or `DIRECT_URL` is missing | The command needs a Postgres-backed environment | Copy `web/.env.example` to `web/.env.local` or use `pnpm stack:up` for local integration work. |
+| `ECONNREFUSED`, `ENOTFOUND`, Horizon/RPC timeout, or preview URL missing | External service, local server, mock provider, or Vercel preview is unavailable | Check the named workflow logs first. If local unit tests pass and only the external service failed, note it as environment-dependent. |
+| `schema.ts is out of sync with committed migration files` | Drizzle schema and migrations diverged | Run `pnpm --dir web run db:generate`, inspect the generated SQL, and commit it only when the schema change is intended. |
+| `Generated types differ from committed version` | OpenAPI snapshot and SDK generated types drifted | Run the repository's generated-type workflow and review `packages/sdk/src/generated-types.ts`. |
+| `Browser bundle not built` or missing `packages/sdk/dist/browser/sdk.bundle.js` | SDK build did not produce the expected browser artifact | Run `pnpm --filter @talos-protocol/sdk run build:browser` or the full SDK build. |
+| `ruff` violations | Python formatting or lint rule failures | Run `uv run ruff check src tests` in `packages/prime-agent/` and fix the reported files. |
+| `wasm32-unknown-unknown` target not installed | Rust cannot build Soroban Wasm artifacts | Run `rustup target add wasm32-unknown-unknown`. |
+| `gitleaks is not installed` | The secret scanner is missing from PATH | Install gitleaks (see Prerequisites) and re-run `pnpm run secrets:check`. |
+| `secret-scan: FAILED` with `file:line:rule` | A staged change contains a detected secret | Remove the secret and load it from the environment/secrets manager. Sanctioned false positives get a trailing `# gitleaks:allow` comment. |
+| `unable to load gitleaks config` | `.gitleaks.toml` is missing or malformed | Restore/fix `.gitleaks.toml`; `pnpm run secrets:check` fails closed until the config is valid. |
+| `Refusing to delete local test data without --yes` | The safe reset guards against accidental truncation | Re-run with `--yes`, or preview with `--dry-run`. |
+| `Refusing to reset database "…" on non-local host "…"` (or `non-local host`) | `DATABASE_URL` points at a hosted database such as Supabase | Use `pnpm stack:reset-data` for the compose stack, or export a loopback `DATABASE_URL`. Remote hosts are refused by design — there is no override flag. |
+| `local-stack: the postgres service is not running` | `pnpm stack:reset-data` was run before the stack came up | `pnpm stack:up`, then retry. The reset CLI is never invoked in this state. |
+| `missing modelled tables` or `No Talos tables found` | The local database is not migrated | `pnpm --dir web run db:migrate`, then retry. |
+| `Could not reach 127.0.0.1:5432` | The local database is unreachable after retries | Check `pnpm stack:logs`; start the stack with `pnpm stack:up`. |
+| PR preview comment is present but Vercel URL is absent | The repo preview workflow provisions the mock DB; Vercel attaches previews separately | Check Vercel's GitHub integration/status before treating it as an application failure. |
+
+## Code Style
+
+- Keep changes small and focused
+- Match the existing patterns in the area you are editing
+- Prefer descriptive names over clever abstractions
+- Add or update tests when behavior changes
+- Do not commit secrets, keys, or generated `.env` files
+- For TypeScript and React, run `pnpm lint` and the relevant `pnpm test:*` command before opening a PR
+- For Python, prefer explicit types and validate changes with `uv run pytest`
+- For provider job-effect changes, also run
+  `uv run pytest tests/test_durable_job_effects.py` and follow the
+  [durable job effects runbook](./docs/prime-agent-durable-job-effects.md).
+- For Rust, keep formatting standard with `cargo fmt` and validate with `cargo test`
+
+### Secret scanning
+
+Local contribution checks include a [gitleaks](https://github.com/gitleaks/gitleaks) scan of your **staged changes**. The exact command to run before opening a PR is:
+
+```bash
+pnpm run secrets:check
+```
+
+(`pnpm run secrets:check` invokes `bash scripts/secret-scan.sh` — the single source of truth for local secret scanning.)
+
+Behavior:
+
+- **Nothing staged** — the check passes trivially (exit 0).
+- **A secret is detected** — the check fails and prints only `file:line:rule` for each finding. Secret values and line contents are never echoed (output is redacted).
+- **Missing or malformed `.gitleaks.toml`** — the check fails closed with an actionable error; it never reports “no secrets found” in that state.
+- **`gitleaks` not installed or the scanner crashes** — the check fails closed with install/debug instructions (see Prerequisites). It never treats a scanner failure as a clean scan.
+- **Boundary paths** — generated, vendored, build-output, and binary/asset paths are ignored via the explicit allowlist in [`.gitleaks.toml`](./.gitleaks.toml).
+- **Sanctioned false positives** — add a trailing `# gitleaks:allow` comment on that line instead of widening the allowlist.
+
+Regression tests for the check live in `scripts/secret-scan.test.sh` (`bash scripts/secret-scan.test.sh`).
+
+## Database Transaction Retry & Serialization Hardening
+
+For the cross-package, local-stack, release, security, and runtime metric
+definitions used by operators, see [docs/operational-metrics.md](docs/operational-metrics.md).
+Run `pnpm metrics:check` when changing a metric source or definition.
+
+Critical database state transitions (money, token purchases, patron creation, job state transitions, agent genesis) use `withTransactionRetry` from `web/src/db/db-retry.ts` to automatically recover from PostgreSQL serialization conflicts (`40001`), deadlocks (`40P01`), lock timeouts (`55P03`), and transient connection failures.
+
+### Environment Configuration
+
+- `DB_TRANSACTION_RETRY_ENABLED`: Controls transaction retry behavior (default: `true`). Set to `false` to disable retries instantly.
+- `DB_TRANSACTION_RETRY_MAX_RETRIES`: Maximum number of retry attempts (default: `5`).
+- `DB_TRANSACTION_RETRY_INITIAL_DELAY_MS`: Initial exponential backoff delay in milliseconds (default: `50`).
+- `DB_TRANSACTION_RETRY_MAX_DELAY_MS`: Maximum exponential backoff cap in milliseconds (default: `1000`).
+
+### Operational Signals & Observability
+
+Retries emit structured Pino log events with domain categories (`MONEY`, `TOKEN`, `PATRON`, `JOB`, `GENESIS`):
+
+- `db_transaction_retry_attempt` (`logger.warn`): Logged when a retryable serialization/connection error triggers a retry attempt.
+- `db_transaction_retry_success` (`logger.info`): Logged when a transaction succeeds after prior failed attempts.
+- `db_transaction_retry_exhausted` (`logger.error`): Logged when maximum retry attempts are exceeded.
+
+Sensitive data (keys, passphrases, raw payloads) are excluded from log context.
+
+### Local Verification
+
+To run unit and concurrency contention tests:
+
+```bash
+pnpm --filter web exec vitest run tests/db-retry.unit.test.ts tests/db-retry.contention.test.ts
+```
+
+### Rollback Guidance
+
+If operational issues or database performance degradation occur:
+
+1. Set `DB_TRANSACTION_RETRY_ENABLED=false` in `web/.env.local` or application environment variables.
+2. Restart the web server. This immediately falls back to single-attempt database transactions without requiring application redeployments or code rollbacks.
+
+## SDK Event Stream (`TalosEventStream`)
+
+The `packages/sdk` package exports a browser and Node-compatible SSE client for the Talos platform event stream.
+
+### Quick start
+
+```ts
+import { TalosEventStream, InMemorySeenStore } from "@talos-protocol/sdk";
+
+const stream = new TalosEventStream("https://talos-stellar.vercel.app", {
+  authHeader: "Bearer <api-key>",
+  seenStore: new InMemorySeenStore(), // optional, suppresses duplicates on reconnect
+});
+
+stream.on("event", (evt) => console.log(evt.type, evt.data));
+stream.on("error", (err, attempt) => console.error("attempt", attempt, err));
+stream.on("close", () => console.log("stream closed"));
+
+stream.connect();
+
+// To stop:
+stream.close();
+```
+
+### Configuration reference
+
+| Option                 | Default       | Notes                                                     |
+| ---------------------- | ------------- | --------------------------------------------------------- |
+| `path`                 | `/api/events` | Stream endpoint path                                      |
+| `authHeader`           | —             | Sent as `Authorization` header. Never logged.             |
+| `maxReconnectAttempts` | `10`          | Total attempts before permanent close                     |
+| `baseReconnectDelayMs` | `1000`        | Base delay; doubles per attempt                           |
+| `maxReconnectDelayMs`  | `30000`       | Backoff ceiling                                           |
+| `jitter`               | `true`        | Full-jitter on reconnect delay                            |
+| `maxHeartbeatMisses`   | `3`           | Consecutive missed heartbeat ticks before stall reconnect |
+| `heartbeatIntervalMs`  | `30000`       | Heartbeat watchdog interval                               |
+| `seenStore`            | —             | `SeenStore` implementation for duplicate suppression      |
+| `signal`               | —             | External `AbortSignal` to close the stream                |
+
+### Operational signals
+
+The optional `logger` receives structured, privacy-safe events (no payloads, no credentials):
+
+| Event                      | Level | Meaning                                         |
+| -------------------------- | ----- | ----------------------------------------------- |
+| `sse:connecting`           | info  | Initial connect or reconnect                    |
+| `sse:reconnect_scheduled`  | info  | Reconnect delay queued with `delayMs`           |
+| `sse:duplicate_suppressed` | info  | An event ID was already in `seenStore`          |
+| `sse:error`                | warn  | Connection error, `attempt` included            |
+| `sse:heartbeat_miss`       | warn  | No server activity during watchdog interval     |
+| `sse:stall_detected`       | warn  | `maxHeartbeatMisses` reached; forcing reconnect |
+| `sse:budget_exhausted`     | warn  | All reconnect attempts used                     |
+| `sse:handler_error`        | error | An `on("event")` handler threw                  |
+
+Pass any `{ info, warn, error }` compatible logger (e.g. `pino`, `console`):
+
+```ts
+import pino from "pino";
+const stream = new TalosEventStream(url, { logger: pino(), authHeader });
+```
+
+### Duplicate suppression
+
+`InMemorySeenStore` (capacity 10 000, LRU eviction) covers process-lifetime dedup.
+For cross-restart guarantees supply a persistent implementation:
+
+```ts
+class RedisSeenStore implements SeenStore {
+  async has(id: string) {
+    return Boolean(await redis.exists(`seen:${id}`));
+  }
+  async add(id: string) {
+    await redis.set(`seen:${id}`, 1, "EX", 86400);
+  }
+}
+```
+
+### Rollback
+
+`TalosEventStream` is additive — no existing API surface changed. To disable the feature: simply don't call `connect()`, or `close()` the stream immediately.
+
+### Compatibility notes
+
+- Requires `fetch` and `ReadableStream` (native in browsers and Node ≥ 18).
+- In Node 18 you may need `--experimental-fetch` if not enabled by default; Node 20+ needs nothing.
+- The `fetch` option in `TalosEventStreamOptions` lets you inject a polyfill or mock for older runtimes and tests.
+
+### Local verification
+
+```bash
+cd packages/sdk
+npm test        # runs vitest — all 93 tests should pass
+npm run build   # tsc compile check
+```
+
+## PR Preview Environments
+
+Talos Protocol supports reproducible, ephemeral per-PR web and database preview environments with automatic lifecycle management. This ensures contributors can verify full-stack changes safely before merging.
+
+### Setup and Provisioning
+
+When you open or synchronize a PR, the `PR Preview Provision` GitHub Action automatically provisions an ephemeral database branch (e.g., using Neon or a mock provider during development). It will:
+1. Provision the database and configure environment naming (e.g., `pr-123`).
+2. Run database migrations (`pnpm db:migrate`).
+3. Seed the database with demo data (`pnpm db:seed-demo`).
+4. Generate an isolated Vercel Preview URL linked to this ephemeral database.
+
+A bot will comment on your PR with the connection details and the preview link once it is ready.
+
+### Verification
+
+To verify the preview environments locally or manually test the lifecycle:
+```bash
+# Provision a mock environment for a specific PR
+pnpm --dir web env:provision 123 my-feature-branch
+
+# Teardown the mock environment
+pnpm --dir web env:teardown 123
+```
+Unit tests for the environment lifecycle logic reside in `web/src/area/devx/__tests__/environments.test.ts` (or similar tests). Make sure tests pass locally by running the relevant Vitest file directly, for example `pnpm --dir web exec vitest run src/area/devx/__tests__/environments.test.ts`.
+
+### Rollback and Teardown
+
+Preview environments are destroyed automatically when the PR is closed or merged via the `PR Preview Teardown` GitHub workflow.
+Cost limits and TTLs (Time-To-Live) are enforced programmatically. If an environment becomes unstable, you can manually trigger a rebuild by closing and reopening the PR, or trigger the teardown script via CLI.
+
+### Troubleshooting
+
+- **Database provisioning fails**: Check the GitHub Actions logs for `PR Preview Provision`. Ensure your branch passes linting and type checks, as migration errors often cause provisioning failures.
+- **Preview URL is missing**: Vercel manages the web preview natively. Ensure the Vercel GitHub integration is active for the repository.
+- **Stale data**: The environment is seeded once upon provisioning. If you change the seed script, you may need to close and reopen the PR to provision a fresh database.
+
+## CI Path Filtering (Changed-Path Package Matrix)
+
+The unified CI workflow (`.github/workflows/ci.yml`) runs only the checks relevant to the packages affected by a PR. A detection script (`scripts/ci-detect-changes.sh`) diffs changed files against the PR base and builds a JSON matrix of affected packages.
+
+### Path → package mapping
+
+| Changed path pattern | Packages checked |
+|---|---|
+| `web/**` | web (typecheck, lint, unit tests) |
+| `packages/sdk/**` | sdk (build/typecheck, tests) |
+| `packages/prime-agent/**` | prime-agent (ruff, pytest) |
+| `contracts/**` | contracts (cargo test, WASM build) |
+| `pnpm-lock.yaml`, `package-lock.json`, `pnpm-workspace.yaml`, root `package.json`, `scripts/**`, `.github/**` | **ALL** packages |
+| Unknown / unclassified files | **ALL** packages (fail-closed) |
+
+### Local validation
+
+To test the detection script locally before pushing:
+
+```bash
+# Dry-run against a specific commit range
+BASE_SHA=<base> HEAD_SHA=<head> bash scripts/ci-detect-changes.sh
+
+# Request the full matrix explicitly (no git access needed)
+bash scripts/ci-detect-changes.sh --all
+
+# Run the full test suite (this is the exact command CI runs as a
+# self-test step in the `detect` job of `.github/workflows/ci.yml`)
+bash scripts/ci-detect-changes.test.sh
+```
+
+### Failure semantics (fail closed, fail safe)
+
+The detector never silently skips checks. Every degraded path produces the full package matrix and exits 0, so a broken detector cannot produce a falsely green run:
+
+| Input | Behavior |
+|---|---|
+| Missing `BASE_SHA` / `HEAD_SHA` | `::error::` annotation, ALL packages, exit 0 |
+| Malformed SHA / revision-like option injection | Rejected before git is called; `::error::` annotation, ALL packages, exit 0 |
+| SHA does not resolve to a commit (e.g. force push, shallow clone) | `::error::` annotation, ALL packages, exit 0 |
+| `git diff` failure | Retried up to `DETECT_MAX_DIFF_ATTEMPTS` (default 3) with `DETECT_DIFF_RETRY_BACKOFF_SECONDS` (default 1s) backoff; on exhaustion `::error::` annotation, ALL packages, exit 0 |
+| Malformed retry env knobs | `::warning::` annotation, defaults used |
+| Empty diff (base == head, no changed files) | Empty matrix `{"include":[]}` |
+| Unclassified path | ALL packages; warning reports only the count of offending paths, never the paths themselves |
+| `--all` flag or >2 positional args | Full matrix without git access; explicit error if more than 2 args |
+
+Privacy-safety: diagnostics never echo raw input values (SHAs come from event payloads and paths may be attacker-controlled in fork PRs) and never include secrets, tokens, or payment proofs. The script only inspects file paths via `git diff --name-only -z` and never executes PR code.
+
+### Design principles
+
+- **Fail-closed**: if the detector cannot confidently determine the scope (invalid SHA, unrecognized path, git failure), ALL packages are checked — never zero.
+- **Fail-safe**: every degraded path still exits 0 with a valid matrix, so a broken detector degrades to a full run instead of a silently skipped one.
+- **No code execution from PRs**: the detector only inspects file paths via `git diff --name-only -z` (NUL-delimited, safe for spaces/unicode).
+- **No secrets required**: works for fork PRs using only the GitHub-provided base/head SHAs.
+
+### Existing per-package workflows
+
+The following specialized workflows continue to run independently with their own path filters:
+
+- `ci-prime-agent.yml` — prime-agent lint + tests
+- `contracts-ci.yml` — contract tests + WASM build
+- `sdk-compatibility.yml` — SDK build + tests across Node versions
+- `sdk-types-ci.yml` — SDK generated-type drift detection
+- `web-migrations-ci.yml` — web database migration validation
+- `web-openapi-ci.yml` — web OpenAPI snapshot check
+- `benchmark-ci.yml` — performance regression gates
+
+The unified `ci.yml` workflow is an **additional** PR gate, not a replacement.
+
+### Contract artifact caching
+
+The workflows that build Soroban wasm artifacts (`contracts-ci.yml`, the contracts job in
+`ci.yml`, `release-publish.yml`, and `sbom-provenance.yml`) cache
+`contracts/target/wasm32-unknown-unknown/release` so dependency compilation is not repeated
+on every run. The cache key combines the runner OS, a rustc fingerprint, and a strong
+content hash of the contract build inputs (sources, manifests, `Cargo.lock`, cargo/soroban
+config) computed by `scripts/ci-contract-cache.sh key-hash`. Restored entries are validated
+before use (`validate`) and gated again after the build (`verify`); cold, corrupted, or
+input-changed entries fall back to a full rebuild instead of failing the job or serving
+stale bytes, while ambiguous key inputs and missing/invalid artifacts fail closed with an
+explicit error. Only the build output directory is cached — never `.env` files, configs, or
+secrets.
+
+To validate the cache helpers locally before pushing:
+
+```bash
+bash scripts/ci-contract-cache.test.sh
+```
+
+## Pull Request Workflow
+
+1. Create a branch from the latest `main`
+2. Make your changes
+3. Update documentation when setup steps or environment variables change
+4. Run the relevant tests for the area you touched, plus `pnpm run secrets:check` for the local secret scan
+5. Open a pull request using the template in [`.github/PULL_REQUEST_TEMPLATE.md`](./.github/PULL_REQUEST_TEMPLATE.md)
+6. Link the issue in your PR description, for example `Closes #39`
+
+## Releases
+
+Versioning, changelogs, and tagging for `web`, `sdk`, `agent`, and `contracts` are automated —
+see [`RELEASES.md`](./RELEASES.md). You don't need to do anything for this beyond writing
+[Conventional Commits](https://www.conventionalcommits.org/) subjects (`feat: ...`, `fix: ...`,
+etc.) in your PRs; version bumps are computed from those.
+
+Every PR title is automatically checked by the
+[`Release Checks`](.github/workflows/release-checks.yml) CI workflow. To
+validate your PR title locally before pushing:
+
+```bash
+PR_TITLE="feat(sdk): add payments resource" \
+  node scripts/release/check-release-note.mjs
+```
+
+The check fails (exit 1) when the title does not follow Conventional Commits
+format. Rename the PR and re-push to fix it. See [`RELEASES.md`](./RELEASES.md)
+for the full format reference and local reproduction steps.
+
+## Issue and PR Templates
+
+Use the templates already included in the repo when filing new work:
+
+- Bug reports: [`.github/ISSUE_TEMPLATE/bug_report.md`](./.github/ISSUE_TEMPLATE/bug_report.md)
+- Feature requests: [`.github/ISSUE_TEMPLATE/feature_request.md`](./.github/ISSUE_TEMPLATE/feature_request.md)
+- Pull requests: [`.github/PULL_REQUEST_TEMPLATE.md`](./.github/PULL_REQUEST_TEMPLATE.md)
+
+These templates are meant to capture the runtime, environment, and test details we need to review changes quickly.
+
+### Contributor Metadata Testing
+
+To run the tests for the contributor issue metadata parser, use:
+```bash
+node --test scripts/parse-issue-metadata.test.mjs
+```
+
+To test parsing a markdown file locally:
+```bash
+node scripts/parse-issue-metadata.mjs path/to/markdown.md
+```
