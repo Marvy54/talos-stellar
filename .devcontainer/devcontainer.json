@@ -1,18 +1,15 @@
 {
-  "name": "Stellar SDK + Prime Agent + Contracts",
+  "name": "Stellar SDK + Prime Agent + Soroban Dev",
   "build": {
     "dockerfile": "Dockerfile",
-    "context": ".",
-    "args": {
-      "NODE_VERSION": "20",
-      "PYTHON_VERSION": "3.11"
-    }
+    "context": "."
   },
-  "workspaceFolder": "/workspaces/stellar-sdk",
-  "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/stellar-sdk,type=bind",
-  "remoteUser": "vscode",
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils": {}
+  },
   "forwardPorts": [
     3000,
+    3001,
     5432,
     8000,
     8080,
@@ -20,64 +17,22 @@
     9000,
     9090
   ],
-  "portAttributes": {
-    "3000": {
-      "label": "web dev server",
-      "onAutoForward": { "ignoreClients": true }
-    },
-    "5432": { "label": "Postgres" },
-    "8000": { "label": "Sorban/Stellar core HTTP" },
-    "8080": { "label": "Sorban/Stellar core HTTP (alt)" },
-    "8888": {
-      "label": "web dev server (alt)",
-      "onAutoForward": { "ignoreClients": true }
-    },
-    "9000": { "label": "Prime agent dev server" },
-    "9090:": { "label": "Prime agent dev server (alt)" }
-  },
-  "features": {
-    "ghcr.com/devcontainers/features/common-utils:1": {},
-    "ghcr.com/devcontainers/features/docker-in-docker:1": {},
-    "ghcr.com/devcontainers/features/github-cli:1": {}
-  },
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "remoteUser": "node",
   "customizations": {
     "vscode": {
       "extensions": [
-        "dbwjdbj.dbaever",
-        "esbeen.pyvise",
-        "mshenton.python",
+        "dbhoevem.python",
+        "mscraftsls.js-debug",
+        "esbendp.prettier",
+        "dbwaeh.dlb",
         "rust-lang.rust-analyzer",
-        "taikung.vscode-soroban",
-        "birang.vscode-solidity",
-        "esben.python-env",
-        "dbwjdbj.dbaever",
-        "unified.stellar-smart-contracts"
+        "tamawoh.rust",
+        "binderv.devcontainers"
       ],
       "settings": {
-        "python.defaultInterpreterPath": "/home/vscode/.venv/bin/python",
-        "python.testing.unitTestEnabled": true,
-        "python.testing.pytestEnabled": true,
-        "typescript.tsdk": "/workspaces/stellar-sdk/node_modules/typescript/lib",
-        "editor.formatOnSave": true,
-        "rust-analyzer.checkOnSave": "clippy",
         "terminal.integrated.defaultProfile.linux": "bash"
       }
     }
-  },
-  "postCreateCommand": "bash .devcontainer/post-create.sh",
-  "postStartCommand": "sudo chown -R ${USER} ${CARGO_HOME} /home/${USER}/.local/share/pnpm 2>/dev/null || true",
-  "remoteEnv": {
-    "POSTGRES_HOST": "db",
-    "POSTGRES_PORT": "5432",
-    "REDIS_URL": "redis://redis:6379/0",
-    "STELLAR_NETWORK": "testnet",
-    "REFER_DEV": "1"
-  },
-  "mounts": [
-    "source=stellar-sdk-pnpm-store,target=/home/vscode/.local/share/pnpm,type=volume",
-    "source=stellar-sdk-cargo-registry,target=/home/vscode/.cargo/registry,type=volume",
-    "source=stellar-sdk-cargo-git,target=/home/vscode/.cargo/git,type=volume",
-    "source=stellar-sdk-target,target=/workspaces/stellar-sdk/contracts/target,type=volume"
-  ],
-  "waitForOnFolderOpen": true
+  }
 }
