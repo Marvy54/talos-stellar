@@ -1,0 +1,52 @@
+{
+  "name": "Stellar Sorban + Next.js + Python + Rust",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".",
+    "args": {
+      "NODE_VERSION": "20",
+      "PYTHON_VERSION": "3.11"
+    }
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/common-utility": {},
+    "ghcr.io/devcontainers/features/docker-in-docker": {}
+  },
+  "forwardPorts": [
+    3000,
+    5432,
+    8000,
+    8080,
+    8888,
+    9000
+  ],
+  "portAttributes": {
+    "3000": {"label": "web dev server"},
+    "5432": {"label": "postgres"},
+    "8000": {"label": "prime-agent"},
+    "8080": {"label": "stellar rpc"},
+    "8888": {"label": "stellar core"},
+    "9000": {"label": "dev services"}
+  },
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "remoteUser": "devcontainer",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbwaef.VSCode-database-client",
+        "esbenfp.esben-prettier",
+        "ms-azuretools.vscode-docker",
+        "ms-python.python",
+        "ms-python.vscode-python",
+        "rust-lang.rust-analyzer",
+        "stellar-dev.stellar-vscode-extension",
+        "tailwindlabs.vscode-tailwindcss"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "terminal.integrated.defaultProfile.linux": "bash"
+      }
+    }
+  },
+  "waitForOnFolders": []
+}

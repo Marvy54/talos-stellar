@@ -1,0 +1,27 @@
+{
+  "default_branch": "main",
+  "branches": [
+    "feat/issue-510-feat-web-add-conditional-etags-to-agent-detail",
+    "feat/issue-558-feat-agent-propagate-trace-context-across",
+    "fix/issue-929-chore-devx-add-a-devcontainer-with-node-pnpm",
+    "fix/issue-929-chore-devx-add-a-devcontainer-with-node-pnpm-r2",
+    "main",
+    "origin"
+  ],
+  "parent": {
+    "feat/issue-510-feat-web-add-conditional-etags-to-agent-detail": "main",
+    "feat/issue-558-feat-agent-propagate-trace-context-across": "main",
+    "fix/issue-929-chore-devx-add-a-devcontainer-with-node-pnpm": "main",
+    "fix/issue-929-chore-devx-add-a-devcontainer-with-node-pnpm-r2": "fix/issue-929-chore-devx-add-a-devcontainer-with-node-pnpm",
+    "main": null,
+    "origin": "main"
+  },
+  "order": [
+    "main",
+    "feat/issue-510-feat-web-add-conditional-etags-to-agent-detail",
+    "feat/issue-558-feat-agent-propagate-trace-context-across",
+    "fix/issue-929-chore-devx-add-a-devcontainer-with-node-pnpm",
+    "origin",
+    "fix/issue-929-chore-devx-add-a-devcontainer-with-node-pnpm-r2"
+  ]
+}
